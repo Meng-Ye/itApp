@@ -1,0 +1,28 @@
+
+<!-- template name: form.autopost.template.html -->
+
+
+<html>
+    <head>
+        <title>Submit Form</title>
+        <meta name="referrer" content="origin"/>
+        <meta http-equiv="x-ua-compatible" content="IE=edge" />
+    </head>
+    <body onload="javascript:document.forms[0].submit()">
+       <noscript>
+            <p>
+                <strong>Note:</strong> Since your browser does not support JavaScript, you must press the Resume button once to proceed.
+            </p>
+        </noscript>
+        <form method="post" action="https://www.ti.com.cn/oidc/redirect_uri/">
+                        <input type="hidden" name="code" value="u5wD5bwA3j5pO38xUKlr8_0TrZsjtKpMHDZUlKCg"/>
+                        <input type="hidden" name="state" value="fLoMMYH0mbjrpyark0_imiOyOCM"/>
+                        <noscript><input type="submit" value="Resume"/></noscript>
+        </form>
+    <link rel="stylesheet" type="text/css" href="/_sec/cp_challenge/sec-3-6.css">
+            <script src="/_sec/cp_challenge/sec-cpt-3-6.js" async defer></script>
+            <div id="sec-overlay" style="display:none;">
+            <div id="sec-container">
+            </div>
+          </div></body>
+</html>

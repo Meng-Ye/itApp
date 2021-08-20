@@ -1,0 +1,1 @@
+curl "https://www.ti.com.cn/storeservices/cart/opninventory?opn="$1""  --compressed -s | jq -r -c ".inventory"
