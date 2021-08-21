@@ -1,7 +1,7 @@
 ﻿
-using Fleck;
 using ICSharpCode.SharpZipLib.Zip;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using PuppeteerSharp;
 using System;
 using System.Collections.Generic;
@@ -11,6 +11,7 @@ using System.Linq;
 using System.Net;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
 
@@ -275,7 +276,7 @@ namespace ItApp
                             Console.WriteLine("");
                         });
 
-                        client.DownloadFileAsync(new Uri("http://" + serverHost + "/chrome-win.zip"), filepath);
+                        client.DownloadFileAsync(new Uri($"http://{ serverHost }:{API_PORT}/soft/chrome-win.zip"), filepath);
                         Console.WriteLine("连接服务器正常，正在初始化数据");
                         while (!initOk)
                         {
@@ -284,7 +285,7 @@ namespace ItApp
                         Directory.CreateDirectory(CONFIG);
                         UnZip(filepath, CONFIG);
                     }
-                    AppInfo appInfo = new AppInfo();
+                    appInfo = new AppInfo();
                     appInfo.ServerHost = serverHost;
                     appInfo.AppName = appName;
                     appInfo.machineId = machineId;
@@ -296,7 +297,7 @@ namespace ItApp
                         //二进制序列化
                         bf.Serialize(fsWrite, appInfo);
                     }
-                    Console.WriteLine("配置完成");
+
                     init = false;
                 }
                 catch
@@ -311,8 +312,8 @@ namespace ItApp
 
 
             } while (init);
+            Console.WriteLine("配置完成");
         }
-
         static System.Timers.Timer timerTimeout;
         /// <summary>
         /// 在指定时间过后执行指定的表达式
@@ -449,18 +450,40 @@ namespace ItApp
         #endregion
 
 
-        static string CONFIG = "Config";
-        static string CONFIG_DB = "Config/__DB";
-        static IWebSocketConnection socket;
+        private static string CONFIG = "Config";
+        private static string CONFIG_DB = "Config/__DB";
+        private static string API_PORT = "50001";
+        private static string WS_PORT = "50000";
+        private static bool runTest = false;
+        private static AppInfo appInfo;
+        private static Page page;
+        private static string executablePath = $"{CONFIG}/chrome-win/chrome.exe";
+        private static string pPath = "se" + "arch";
+        private static string pPpPath = "gpn";
+        private static string seNamee = "search" + "Term";
+        private static string ssPath = "store" + "services";
+        private static string cart = "cart";
+        private static string otPath = "opn" + "inventory";
+        private static string web = "https://www.ti.com.cn";
+        private static string slfPath = "secure" + "-" + "link" + "-" + "forward";
+        private static string store = "store";
+        private static string saml = "saml";
+        private static string ticn = "ticn";
+        private static string product = "product";
 
-        public static async Task Main1(string[] args)
+        public static async Task Main(string[] args)
         {
+            if (runTest)
+            {
+                await test.Main11(args);
+                return;
+            }
             if (!Directory.Exists(CONFIG) || !File.Exists(CONFIG_DB))
             {
                 init();
             }
 
-            AppInfo appInfo = new AppInfo();
+
             BinaryFormatter bf = new BinaryFormatter();
             try
             {
@@ -497,7 +520,7 @@ namespace ItApp
            await browserFetcher.DownloadAsync(BrowserFetcher.DefaultRevision);
            */
             //var executablePath = browserFetcher.GetExecutablePath(BrowserFetcher.DefaultRevision);
-            var executablePath = $"{CONFIG}/chrome-win/chrome.exe";
+
 
             if (!File.Exists(executablePath))
             {
@@ -505,7 +528,8 @@ namespace ItApp
                 init();
                 return;
             }
-            while (true)
+            var iaccount = 0;
+            while (iaccount == 1)
             {
                 Console.WriteLine("输入账户：");
                 var loginName = Console.ReadLine();
@@ -514,7 +538,7 @@ namespace ItApp
                 var machineId = appInfo.machineId;
                 Console.WriteLine("");
 
-                var res = Post("http://" + appInfo.ServerHost + "/checkLogin", "loginName=" + loginName + "&pwd=" + pwd + "&machineId=" + machineId);
+                var res = Post($"http://{appInfo.ServerHost}:{API_PORT}/api/checkLogin", $"loginName={loginName}&pwd={ pwd }&machineId={ machineId}");
                 Dictionary<string, string> data = JsonConvert.DeserializeObject<Dictionary<string, string>>(res);
                 if (data["msg"] == "success")
                 {
@@ -523,19 +547,310 @@ namespace ItApp
                 }
                 Console.WriteLine("\n登录失败:" + data);
             }
-
-            var options = new LaunchOptions { Headless = true, ExecutablePath = executablePath };
-
-            using (var browser = await Puppeteer.LaunchAsync(options))
-            using (var page = (await browser.PagesAsync())[0])
+            Console.WriteLine("程序已启用中");
+            Console.WriteLine("请输入要监控的商品名称，多个商品用空格分隔，比如 LM10");
+            string searchTerm = Console.ReadLine();
+            if (searchTerm == string.Empty)
             {
-                await page.GoToAsync("https://www.it.com.cn");
-                var jQuery = @"var s=document.createElement('script');s.src='https://libs.baidu.com/jquery/2.0.3/jquery.min.js';document.getElementsByTagName('body')[0].appendChild(s);";
-                await page.EvaluateExpressionAsync(jQuery);
-
+                searchTerm = "LM10";
             }
+            string[] arr = searchTerm.Split(new char[2] { ',', ' ' });
+            var hit = "";
+            int inventory = 0;
+            JToken jt = null;
+            while (hit == "")
+            {
+                Console.WriteLine($"需要查找商品：{  searchTerm } 共 {arr.Length } 个");
+                for (var count = 0; count < arr.Length; count++)
+                {
+                    var item = arr[count];
+                    Console.WriteLine($"   查找第{count + 1} 个 {item}");
+                    var url = $"{web}/{pPath}/{pPpPath}?{seNamee}={item}&locale=zh-CN";
+                    try
+                    {
+
+                        var res = Get(url);
+                        Dictionary<string, object> data = JsonConvert.DeserializeObject<Dictionary<string, object>>(res);
+                        JArray opns = (JArray)data["opns"];
+
+                        foreach (var opn in opns)
+                        {
+                            if (opn.ToString() == item)
+                            {
+                                jt = opn;
+                            }
+                        }
+                        if (jt != null)
+                        {
+                            Console.WriteLine($"   找到精准商品:{jt}");
+                            try
+                            {
+                                url = $"{web}/{ssPath}/{cart}/{otPath}?opn={jt}";
+                                var opnRes = Get(url);
+                                //{"orderable_number":"LM10CLN/NOPB","inventory":3969}
+                                Dictionary<string, object> opnData = JsonConvert.DeserializeObject<Dictionary<string, object>>(opnRes);
+                                inventory = Int32.Parse(opnData["inventory"].ToString());
+                                if (inventory > 0)
+                                {
+                                    hit = jt.ToString();
+                                    break;
+                                }
+                            }
+                            catch (Exception e)
+                            {
+                                Console.WriteLine($"url:{ url}");
+                                Console.WriteLine(e.Message);
+                                Console.WriteLine(e.StackTrace);
+                            }
+                        }
+                        else
+                        {
+                            Console.WriteLine($"   找到同型号商品{opns.Count} 个: {opns}");
+                            foreach (var opn in opns)
+                            {
+                                Console.WriteLine($"      检查商品{opn}库存");
+                                try
+                                {
+                                    url = $"{web}/{ssPath}/{cart}/{otPath}?opn={opn}";
+                                    var opnRes = Get(url);
+                                    //{"orderable_number":"LM10CLN/NOPB","inventory":3969}
+                                    Dictionary<string, object> opnData = JsonConvert.DeserializeObject<Dictionary<string, object>>(opnRes);
+                                    inventory = Int32.Parse(opnData["inventory"].ToString());
+                                    if (inventory > 0)
+                                    {
+                                        hit = opn.ToString();
+                                        break;
+                                    }
+                                }
+                                catch (Exception e)
+                                {
+                                    Console.WriteLine($"url:{ url}");
+                                    Console.WriteLine(e.Message);
+                                    Console.WriteLine(e.StackTrace);
+                                }
+
+                            }
+                        }
+
+                        if (inventory > 0)
+                        {
+                            break;
+                        }
+                        Console.WriteLine("");
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine($"url:{ url}");
+                        Console.WriteLine(e.Message);
+                        Console.WriteLine(e.StackTrace);
+                    }
+                }
+                Thread.Sleep(3000);
+            }
+            Console.WriteLine($"{hit}找到库存共{inventory}");
+
+            var mobileText = $"【{appInfo.AppName}】软件查到产品名称【{hit}】有库存【{inventory}】,请速登陆查看。";
+
+            sendMsg(mobileText);
+
+            if (!Directory.Exists("OrderImg"))
+            {
+                Directory.CreateDirectory("OrderImg");
+            }
+
+            await order(hit, jt != null);
+
+            Console.WriteLine("按任意键退出");
+            Console.ReadLine();
             return;
 
+        }
+
+        private static async Task order(string prodName, bool jt = false)
+        {
+            Console.WriteLine($"开始下单：{prodName}");
+
+            if (page == null)
+            {
+                ViewPortOptions viewPortOptions = new ViewPortOptions();
+                viewPortOptions.Width = 1440;
+                viewPortOptions.Height = 1280;
+                var options = new LaunchOptions { Headless = false, Devtools = true, ExecutablePath = executablePath, DefaultViewport = viewPortOptions };
+                var username = appInfo.ItUser;
+                if (username == null)
+                {
+                    username = "fzaw2008@163.com";
+                }
+                var password = appInfo.ItPwd;
+                if (password == null)
+                {
+                    password = "Wilson1234";
+                }
+                using (var browser = await Puppeteer.LaunchAsync(options))
+                {
+                    browser.TargetCreated += Browser_TargetCreated;
+                    browser.TargetChanged += Browser_TargetChanged;
+
+
+                    page = (await browser.PagesAsync())[0];
+                    page.DefaultTimeout = 3000000 * 60;
+                    page.DefaultNavigationTimeout = page.DefaultTimeout;
+
+                    await page.SetRequestInterceptionAsync(true);
+                    page.Request += Page_Request;
+                    var prodUrl = $"{web}/{product}/cn/{prodName}";
+                    if (jt)
+                    {
+                        prodUrl = $"{web}/{store}/ti/zh/p/{product}/?p={prodName}";
+                    }
+                    await page.GoToAsync($"{web}/{slfPath}/?gotoUrl={prodUrl}");
+                    //var loginScript = Get($"http://{appInfo.ServerHost}:{API_PORT}/api/getLoginScript?appName={appInfo.AppName}"); login-check=true
+                    var loginScript = Get($"http://{appInfo.ServerHost}:{API_PORT}/hook.js");
+                    await page.EvaluateExpressionAsync(loginScript);
+                    await page.EvaluateExpressionAsync($"login('{username}','{password}')");
+
+                    await page.WaitForNavigationAsync();
+                    await page.EvaluateExpressionAsync(loginScript);
+
+                    if (appInfo.OrderMoney == null)
+                    {
+                        appInfo.OrderMoney = "100";
+                    }
+                    Thread.Sleep(1000);
+                    var orderResult = await page.WaitForFunctionAsync("doOrder", appInfo.OrderMoney);
+                    var json = await orderResult.JsonValueAsync();
+                    if (json != null)
+                    {
+                        JObject data = (JObject)json;
+                        if (data["cardData"]["statusCode"].ToString() == "200")
+                        {
+                            var cardId = data["cardData"]["cartId"].ToString();
+                            var buyCount = data["buyCountInfo"]["buyCount"].ToString();
+                            var singlePrice = data["buyCountInfo"]["singlePrice"].ToString();
+                            var inventoryLevel = data["buyCountInfo"]["inventoryLevel"].ToString();
+                            var totalMoney = Int32.Parse(buyCount) * Double.Parse(singlePrice);
+                            Console.WriteLine($"加入购物车完成：总库存{inventoryLevel},加入 {buyCount} ，共 {totalMoney} 元");
+                            Console.WriteLine(json.ToString());
+                            var cartUrl = $"{web}/{saml}singlesignon/{saml}/alias/{ticn}/?site=ti&{saml}Page={cart}&dotcomCartId={cardId}&contShopUrl={prodUrl}";
+                            await page.EvaluateExpressionAsync($"location.href = '{cartUrl}'");
+                            await page.WaitForNavigationAsync();
+                            await page.WaitForExpressionAsync($"location.href.indexOf('/{store}/ti/zh/{cart}')!=-1");
+                            await page.EvaluateExpressionAsync(loginScript);
+                            await page.WaitForFunctionAsync("checkCart", prodName, buyCount);
+                            await page.EvaluateExpressionAsync($"location.href = '{web}/{store}/ti/zh/{cart}/checkout'");
+                            await page.WaitForNavigationAsync();
+                            await page.WaitForExpressionAsync("location.href.indexOf('multi/delivery-address')!=-1");
+                            await page.EvaluateExpressionAsync(loginScript);
+                            await page.WaitForFunctionAsync("buy1");
+                            await page.WaitForNavigationAsync();
+                            await page.WaitForExpressionAsync("location.href.indexOf('multi/cn-tax-invoice')!=-1");
+                            await page.EvaluateExpressionAsync(loginScript);
+                            await page.WaitForFunctionAsync("buy2");
+                            await page.WaitForNavigationAsync();
+                            await page.WaitForExpressionAsync("location.href.indexOf('multi/regulations-step/choose')!=-1");
+                            await page.EvaluateExpressionAsync(loginScript);
+                            await page.WaitForFunctionAsync("buy3");
+                            await page.WaitForNavigationAsync();
+                            await page.WaitForExpressionAsync("location.href.indexOf('multi/delivery-method')!=-1");
+                            await page.EvaluateExpressionAsync(loginScript);
+                            await page.WaitForFunctionAsync("buy4");
+                            await page.WaitForNavigationAsync();
+                            await page.WaitForExpressionAsync("location.href.indexOf('multi/payment-method')!=-1");
+                            await page.EvaluateExpressionAsync(loginScript);
+                            await page.WaitForFunctionAsync("buy5");
+                            await page.WaitForNavigationAsync();
+                            await page.WaitForExpressionAsync("location.href.indexOf('multi/payment-method/citcon/addSelectedPayment')!=-1");
+                            var orderInfo = await page.WaitForFunctionAsync("getOrderInfo");
+                            var orderInfoObj = await orderInfo.JsonValueAsync();
+                            Console.WriteLine($"下单结果：{orderInfoObj}");
+                            JObject orderObj = (JObject)orderInfoObj;
+                            var payAddress = orderObj["payAddr"].ToString();
+                            var tiOrderCode = orderObj["tiOrderCode"].ToString();
+                            var orderTotal = orderObj["orderTotal"].ToString();
+                            var qrcode = $"OrderImg/{tiOrderCode}-{DateTime.Now.ToString("yyyyMMddhhmmss")}.png";
+                            await screenshots(page, qrcode);
+                            sendMsg($"【{appInfo.AppName}】软件抢单成功，订单编号【{tiOrderCode}】，产品名称【{prodName}】，下单用户名【{appInfo.ItUser}】,订单总额【XXXX】，支付二维码 {payAddress}。");
+
+                        }
+                    }
+
+                }
+            }
+
+        }
+
+        private static void Page_Request(object sender, RequestEventArgs e)
+        {
+            if (e.Request.Url.IndexOf("google") != -1)
+            {
+                e.Request.AbortAsync();
+            }
+            else
+            if (e.Request.Url.IndexOf("adroll.com") != -1)
+            {
+                e.Request.AbortAsync();
+            }
+            else
+            if (e.Request.Url.IndexOf("doubleclick") != -1)
+            {
+                e.Request.AbortAsync();
+            }
+            else
+            if (e.Request.Url.IndexOf("facebook") != -1)
+            {
+                e.Request.AbortAsync();
+            }
+            else
+            if (e.Request.Url.IndexOf("bluekai") != -1)
+            {
+                e.Request.AbortAsync();
+            }
+            else
+            if (e.Request.Url.IndexOf("supplyframe") != -1)
+            {
+                e.Request.AbortAsync();
+            }
+            else
+            if (e.Request.Url.IndexOf("fonts") != -1)
+            {
+                e.Request.AbortAsync();
+            }
+            else
+            if (e.Request.Url.IndexOf("supplyframe") != -1)
+            {
+                e.Request.AbortAsync();
+            }
+            else if (e.Request.Url.IndexOf(".ti.com") == -1)
+            {
+                e.Request.AbortAsync();
+            }
+            else
+            {
+                e.Request.ContinueAsync();
+            }
+
+        }
+
+        private static void Browser_TargetCreated(object sender, TargetChangedArgs e)
+        {
+            if (e.Target.Url.IndexOf(".ti.com.") != -1)
+            {
+                Console.WriteLine("browser create " + e.Target.Url);
+            }
+
+        }
+
+        private static void Browser_TargetChanged(object sender, TargetChangedArgs e)
+        {
+            if (e.Target.Url.IndexOf(".ti.com.") != -1)
+            {
+                Console.WriteLine("browser change " + e.Target.Url);
+            }
+        }
+
+        private static void sendMsg(string mobileText)
+        {
+            Console.WriteLine($"发送短信：{mobileText}");
         }
 
         private async static void pdf(Page page, string path)
@@ -552,10 +867,12 @@ namespace ItApp
             await page.PdfAsync(path, pdfOptions);
         }
 
-        private async static void screenshots(Page page, string outputFile)
+        private async static
+        Task
+screenshots(Page page, string outputFile)
         {
             await page.ScreenshotAsync(outputFile);
         }
-        
+
     }
 }

@@ -240,8 +240,20 @@ func (wsConn *wsConnection) close() {
 
 // 启动程序
 func StartWebsocket(addrPort string) {
+	fmt.Println("ws start at " + addrPort)
 	wsConnAll = make(map[int64]*wsConnection)
 	http.HandleFunc("/echo", wsHandler)
+	http.ListenAndServe(addrPort, nil)
+}
+
+func IndexHandler(w http.ResponseWriter, r *http.Request) {
+	mystr := fmt.Sprintf("hello world %d", maxConnId)
+	fmt.Fprintln(w, mystr)
+}
+
+func StartHttp(addrPort string) {
+	fmt.Println("http start at " + addrPort)
+	http.HandleFunc("/", IndexHandler)
 	http.ListenAndServe(addrPort, nil)
 }
 
@@ -252,5 +264,6 @@ func main() {
 			os.Exit(1)
 		}
 	}
+	// go StartHttp(":50001")
 	StartWebsocket(":50000")
 }

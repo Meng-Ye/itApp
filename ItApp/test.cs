@@ -1,7 +1,5 @@
-﻿using Fleck;
+﻿
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
@@ -14,6 +12,9 @@ namespace ItApp
         readonly ClientWebSocket _webSocket = new ClientWebSocket();
         readonly CancellationToken _cancellation = CancellationToken.None;
         readonly string WS_URL = "ws://127.0.0.1:50000/echo";
+
+        
+        
         public async Task WebSocket()
         {
             try
@@ -51,6 +52,7 @@ namespace ItApp
             {
                 Console.WriteLine(ex.Message);
                 Console.WriteLine(ex.StackTrace);
+                //await  WebSocket();
             }
            
         }
@@ -58,7 +60,7 @@ namespace ItApp
 
 
 
-        public static async Task Main(string[] args)
+        public static async Task Main11(string[] args)
         {
             Console.WriteLine("test");
             var test = new test();
