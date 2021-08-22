@@ -466,11 +466,11 @@ namespace ItApp
         private static string otPath = "opn" + "inventory";
         private static string web = "https://www.ti.com.cn";
         private static string slfPath = "secure" + "-" + "link" + "-" + "forward";
-        private static string store = "store";
-        private static string saml = "saml";
-        private static string ticn = "ticn";
+        private static string store = "store"; 
         private static string product = "product";
-
+        private static string loginScript;
+         
+        private static Thread changeThread;
         public static async Task Main(string[] args)
         {
             if (runTest)
@@ -622,6 +622,7 @@ namespace ItApp
                                         hit = opn.ToString();
                                         break;
                                     }
+                                    Console.WriteLine(":0");
                                 }
                                 catch (Exception e)
                                 {
@@ -650,7 +651,7 @@ namespace ItApp
             }
             Console.WriteLine($" 找到库存共{inventory}");
 
-            var mobileText = $"【{appInfo.AppName}】软件查到产品名称【{(jt == null ? item+"->"+hit : hit)}】有库存【{inventory}】,请速登陆查看。";
+            var mobileText = $"【{appInfo.AppName}】软件查到产品名称【{(jt == null ? item + "->" + hit : hit)}】有库存【{inventory}】,请速登陆查看。";
 
             sendMsg(mobileText);
 
@@ -658,146 +659,38 @@ namespace ItApp
             {
                 Directory.CreateDirectory("OrderImg");
             }
-            bool orderOk = false;
-            do
+
+            ViewPortOptions viewPortOptions = new ViewPortOptions();
+            viewPortOptions.Width = 1440;
+            viewPortOptions.Height = 1280;
+            var options = new LaunchOptions { Headless = false, Devtools = true, ExecutablePath = executablePath, DefaultViewport = viewPortOptions };
+
+            var browser = await Puppeteer.LaunchAsync(options);
+            browser.TargetCreated += Browser_TargetCreated;
+            browser.TargetChanged += Browser_TargetCreated;
+
+            page = (await browser.PagesAsync())[0];
+            page.DefaultTimeout = 3000000 * 60;
+            page.DefaultNavigationTimeout = page.DefaultTimeout;
+
+            await page.SetRequestInterceptionAsync(true);
+            page.Request += Page_Request;
+            var prodUrl = $"{web}/{product}/cn/{prodName}";
+            if (jt != null)
             {
-                try
-                {
-                    if (jt == null)
-                    {
-                        orderOk = await order(item,false);
-                    }
-                    else
-                    {
-                        orderOk = await order(hit, true);
-                    }
-                    
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e.StackTrace);
-                    Thread.Sleep(1000);
-                }
-            } while (orderOk);
+                Console.WriteLine($"开始下单：{hit}");
+                prodUrl = $"{web}/{store}/ti/zh/p/{product}/?p={prodName}";
+            }
+            else {
+                Console.WriteLine($"开始下单：{item}->{hit}");
+
+            }
+            await page.GoToAsync($"{web}/{slfPath}/?gotoUrl={prodUrl}");
 
             Console.WriteLine("按任意键退出");
             Console.ReadLine();
             return;
 
-        }
-
-        private static async Task<bool> order(string prodName, bool jt = false)
-        {
-            Console.WriteLine($"开始下单：{prodName}");
-
-            if (page == null)
-            {
-                ViewPortOptions viewPortOptions = new ViewPortOptions();
-                viewPortOptions.Width = 1440;
-                viewPortOptions.Height = 1280;
-                var options = new LaunchOptions { Headless = false, Devtools = true, ExecutablePath = executablePath, DefaultViewport = viewPortOptions };
-                var username = appInfo.ItUser;
-                if (username == null)
-                {
-                    username = "fzaw2008@163.com";
-                }
-                var password = appInfo.ItPwd;
-                if (password == null)
-                {
-                    password = "Wilson1234";
-                }
-                using (var browser = await Puppeteer.LaunchAsync(options))
-                {
-                    browser.TargetCreated += Browser_TargetCreated;
-                    browser.TargetChanged += Browser_TargetChanged;
-
-
-                    page = (await browser.PagesAsync())[0];
-                    page.DefaultTimeout = 3000000 * 60;
-                    page.DefaultNavigationTimeout = page.DefaultTimeout;
-
-                    await page.SetRequestInterceptionAsync(true);
-                    page.Request += Page_Request;
-                    var prodUrl = $"{web}/{product}/cn/{prodName}";
-                    if (jt)
-                    {
-                        prodUrl = $"{web}/{store}/ti/zh/p/{product}/?p={prodName}";
-                    }
-                    await page.GoToAsync($"{web}/{slfPath}/?gotoUrl={prodUrl}");
-                    //var loginScript = Get($"http://{appInfo.ServerHost}:{API_PORT}/api/getLoginScript?appName={appInfo.AppName}"); login-check=true
-                    var loginScript = Get($"http://{appInfo.ServerHost}:{API_PORT}/hook.js");
-                    await page.EvaluateExpressionAsync(loginScript);
-                    await page.EvaluateExpressionAsync($"login('{username}','{password}')");
-
-                    await page.WaitForNavigationAsync();
-                    await page.WaitForExpressionAsync("location.href.indexOf('login-check=true')!=-1");
-                    await page.EvaluateExpressionAsync(loginScript);
-
-                    if (appInfo.OrderMoney == null)
-                    {
-                        appInfo.OrderMoney = "100";
-                    }
-                    Thread.Sleep(1000);
-                    var orderResult = await page.WaitForFunctionAsync("doOrder", appInfo.OrderMoney);
-                    var json = await orderResult.JsonValueAsync();
-                    if (json != null)
-                    {
-                        JObject data = (JObject)json;
-                        if (data["cardData"]["statusCode"].ToString() == "200")
-                        {
-                            var cardId = data["cardData"]["cartId"].ToString();
-                            var buyCount = data["buyCountInfo"]["buyCount"].ToString();
-                            var singlePrice = data["buyCountInfo"]["singlePrice"].ToString();
-                            var inventoryLevel = data["buyCountInfo"]["inventoryLevel"].ToString();
-                            var totalMoney = Int32.Parse(buyCount) * Double.Parse(singlePrice);
-                            Console.WriteLine($"加入购物车完成：总库存{inventoryLevel},加入 {buyCount} ，共 {totalMoney} 元");
-                            Console.WriteLine(json.ToString());
-                            var cartUrl = $"{web}/{saml}singlesignon/{saml}/alias/{ticn}/?site=ti&{saml}Page={cart}&dotcomCartId={cardId}&contShopUrl={prodUrl}";
-                            await page.EvaluateExpressionAsync($"location.href = '{cartUrl}'");
-                            await page.WaitForNavigationAsync();
-                            await page.WaitForExpressionAsync($"location.href.indexOf('/{store}/ti/zh/{cart}')!=-1");
-                            await page.EvaluateExpressionAsync(loginScript);
-                            await page.WaitForFunctionAsync("checkCart", prodName, buyCount);
-                            await page.EvaluateExpressionAsync($"location.href = '{web}/{store}/ti/zh/{cart}/checkout'");
-                            await page.WaitForNavigationAsync();
-                            await page.WaitForExpressionAsync("location.href.indexOf('multi/delivery-address')!=-1");
-                            await page.EvaluateExpressionAsync(loginScript);
-                            await page.WaitForFunctionAsync("buy1");
-                            await page.WaitForNavigationAsync();
-                            await page.WaitForExpressionAsync("location.href.indexOf('multi/cn-tax-invoice')!=-1");
-                            await page.EvaluateExpressionAsync(loginScript);
-                            await page.WaitForFunctionAsync("buy2");
-                            await page.WaitForNavigationAsync();
-                            await page.WaitForExpressionAsync("location.href.indexOf('multi/regulations-step/choose')!=-1");
-                            await page.EvaluateExpressionAsync(loginScript);
-                            await page.WaitForFunctionAsync("buy3");
-                            await page.WaitForNavigationAsync();
-                            await page.WaitForExpressionAsync("location.href.indexOf('multi/delivery-method')!=-1");
-                            await page.EvaluateExpressionAsync(loginScript);
-                            await page.WaitForFunctionAsync("buy4");
-                            await page.WaitForNavigationAsync();
-                            await page.WaitForExpressionAsync("location.href.indexOf('multi/payment-method')!=-1");
-                            await page.EvaluateExpressionAsync(loginScript);
-                            await page.WaitForFunctionAsync("buy5");
-                            await page.WaitForNavigationAsync();
-                            await page.WaitForExpressionAsync("location.href.indexOf('multi/payment-method/citcon/addSelectedPayment')!=-1");
-                            var orderInfo = await page.WaitForFunctionAsync("getOrderInfo");
-                            var orderInfoObj = await orderInfo.JsonValueAsync();
-                            Console.WriteLine($"下单结果：{orderInfoObj}");
-                            JObject orderObj = (JObject)orderInfoObj;
-                            var payAddress = orderObj["payAddr"].ToString();
-                            var tiOrderCode = orderObj["tiOrderCode"].ToString();
-                            var orderTotal = orderObj["orderTotal"].ToString();
-                            var qrcode = $"OrderImg/{tiOrderCode}-{DateTime.Now.ToString("yyyyMMddhhmmss")}.png";
-                            await screenshots(page, qrcode);
-                            sendMsg($"【{appInfo.AppName}】软件抢单成功，订单编号【{tiOrderCode}】，产品名称【{prodName}】，下单用户名【{appInfo.ItUser}】,订单总额【XXXX】，支付二维码 {payAddress}。");
-                            return true;
-                        }
-                    }
-
-                }
-            }
-            return false;
         }
 
         private static void Page_Request(object sender, RequestEventArgs e)
@@ -848,32 +741,185 @@ namespace ItApp
             else
             {
                 ResourceType responseType = e.Request.ResourceType;
-                if (responseType == ResourceType.Script || responseType == ResourceType.Image || responseType  == ResourceType.Img || responseType == ResourceType.Font || responseType == ResourceType.StyleSheet || responseType == ResourceType.Other) 
-                { 
-                    SetTimeout(5000,)
+                if (responseType == ResourceType.Script || responseType == ResourceType.Image || responseType == ResourceType.Img || responseType == ResourceType.Font || responseType == ResourceType.StyleSheet || responseType == ResourceType.Other)
+                {
+                    double interval = 15000;
+                    System.Timers.Timer timerTimeout = new System.Timers.Timer(interval);
+                    timerTimeout.Elapsed += new ElapsedEventHandler((s, e1) =>
+                    {
+                        // Console.WriteLine($"请求 {e.Request.Url } => {e.Request.ResourceType} 超过{interval / 1000}秒，强制取消。");
+                        e.Request.AbortAsync();
+                        timerTimeout.Enabled = false;
+                    });
+                    timerTimeout.Enabled = true;
                 }
-                Console.WriteLine($"url:{ e.Request.Url},type:{ e.Request.ResourceType}, method:{e.Request.Method}");
+                // Console.WriteLine($"url:{ e.Request.Url},type:{ e.Request.ResourceType}, method:{e.Request.Method}");
                 e.Request.ContinueAsync();
             }
 
         }
 
+        private static string getUrlType(string url)
+        {
+            string url0 = url.Split('?')[0];
+            if (url0.IndexOf("authorization.oauth") != -1)
+            {
+                return "login";
+            }
+            else if (url0.IndexOf($"/{product}/cn/{prodName}") != -1 || url.IndexOf($"/p/{product}/?p={prodName}") != -1)
+            {
+                return "order";
+            }
+            else if (url0.IndexOf($"/{store}/ti/zh/{cart}") != -1)
+            {
+                return "checkCart";
+            }
+            else if (url0.IndexOf("multi/delivery-address") != -1)
+            {
+                return "deliveryAddress";
+            }
+            else if (url0.IndexOf("multi/cn-tax-invoice") != -1)
+            {
+                return "taxInvoice";
+            }
+            else if (url0.IndexOf("multi/regulations-step/choose") != -1)
+            {
+                return "regulations";
+            }
+            else if (url0.IndexOf("multi/delivery-method") != -1)
+            {
+                return "deliveryMethod";
+            }
+            else if (url0.IndexOf("multi/payment-method/citcon/addSelectedPayment") != -1)
+            {
+                return "orderInfo";
+            }
+            else if (url0.IndexOf("multi/payment-method") != -1)
+            {
+                return "paymentMethod";
+            }
+
+
+            return null;
+        }
+
+
+
         private static void Browser_TargetCreated(object sender, TargetChangedArgs e)
         {
-            if (e.Target.Url.IndexOf(".ti.com.") != -1)
+            if (e.Target.Url.IndexOf(".ti.com") != -1)
             {
+                async Task change()
+                {
+                    var waitForFunctionOtions = new WaitForFunctionOptions() { Timeout = 2000, PollingInterval = 5000 };
+                    if (loginScript == null)
+                    {
+                        loginScript = Get($"http://{appInfo.ServerHost}:{API_PORT}/hook.js");
+                    }
+                    System.Console.WriteLine("是目标页面，开始注入jQuery脚本");
+                    await page.WaitForNavigationAsync();
+                    await page.EvaluateExpressionAsync(loginScript);
+                    await page.WaitForFunctionAsync("addJquery", waitForFunctionOtions);
+                    System.Console.WriteLine("jQuery注入完成");
+                    string url = page.Url;
+                    string type = getUrlType(url);
+                    System.Console.WriteLine($"界面类型为：{type}");
+                    string buyCount = "1";
+                    string prodName = "";
+                    if (type != null)
+                    {
+                        switch (type)
+                        {
+
+                            case "login":
+                                System.Console.WriteLine($"操作登录");
+                                var username = appInfo.ItUser;
+                                if (username == null)
+                                {
+                                    username = "fzaw2008@163.com";
+                                }
+                                var password = appInfo.ItPwd;
+                                if (password == null)
+                                {
+                                    password = "Wilson1234";
+                                }
+                                await page.EvaluateExpressionAsync($"login('{username}','{password}')");
+                                break;
+                            case "order":
+                                System.Console.WriteLine($"操作下单");
+                                if (appInfo.OrderMoney == null)
+                                {
+                                    appInfo.OrderMoney = "100";
+                                }
+                                var orderResult = await page.WaitForFunctionAsync("order", waitForFunctionOtions, appInfo.OrderMoney);
+                                var json = await orderResult.JsonValueAsync();
+                                JObject data = (JObject)json;
+                                if (data["cardData"]["statusCode"].ToString() == "200")
+                                {
+                                    var cardId = data["cardData"]["cartId"].ToString();
+                                    buyCount = data["buyCountInfo"]["buyCount"].ToString();
+                                    prodName = data["buyCountInfo"]["prodName"].ToString();
+                                    var singlePrice = data["buyCountInfo"]["singlePrice"].ToString();
+                                    var inventoryLevel = data["buyCountInfo"]["inventoryLevel"].ToString();
+                                    var totalMoney = Int32.Parse(buyCount) * Double.Parse(singlePrice);
+                                    Console.WriteLine($"{prodName}加入购物车完成：总库存{inventoryLevel},加入 {buyCount} ，共 {totalMoney} 元");
+                                    Console.WriteLine(json.ToString());
+                                }
+                                break;
+                            case "checkCart":
+                                System.Console.WriteLine($"操作购物车");
+                                if (prodName != string.Empty)
+                                {
+                                    await page.WaitForFunctionAsync("checkCart", waitForFunctionOtions, prodName, buyCount);
+                                }
+                                break;
+                            case "orderInfo":
+                                System.Console.WriteLine($"操作获取订单信息");
+                                var orderInfo = await page.WaitForFunctionAsync("orderInfo", waitForFunctionOtions);
+                                var orderInfoObj = await orderInfo.JsonValueAsync();
+                                Console.WriteLine($"下单结果：{orderInfoObj}");
+                                JObject orderObj = (JObject)orderInfoObj;
+                                var payAddress = orderObj["payAddr"].ToString();
+                                var tiOrderCode = orderObj["tiOrderCode"].ToString();
+                                var orderTotal = orderObj["orderTotal"].ToString();
+                                var qrcode = $"OrderImg/{tiOrderCode}-{DateTime.Now.ToString("yyyyMMddhhmmss")}.png";
+                                await screenshots(page, qrcode);
+                                sendMsg($"【{appInfo.AppName}】软件抢单成功，订单编号【{tiOrderCode}】，产品名称【{prodName}】，下单用户名【{appInfo.ItUser}】,订单总额【XXXX】，支付二维码 {payAddress}。");
+
+                                break;
+                            default:
+                                System.Console.WriteLine($"操作{type}");
+                                await page.WaitForFunctionAsync(type, waitForFunctionOtions);
+                                break;
+                        }
+                        System.Console.WriteLine("这波操作结束");
+                        return;
+
+                    }else{
+                        System.Console.WriteLine($"找不到操作目标，地址为：{url}");
+                    }
+
+                    System.Console.WriteLine("这个界面作什么也没有做");
+
+                };
+                if (changeThread!=null && changeThread.IsAlive)
+                {
+                    changeThread.Abort();
+                    changeThread = null;
+                }
+                if (changeThread == null) {
+                    changeThread = new Thread(async () => {
+                        await change();
+                    });
+                    changeThread.Start();
+                }           
+                
+                
                 Console.WriteLine("browser create " + e.Target.Url);
             }
 
         }
 
-        private static void Browser_TargetChanged(object sender, TargetChangedArgs e)
-        {
-            if (e.Target.Url.IndexOf(".ti.com.") != -1)
-            {
-                Console.WriteLine("browser change " + e.Target.Url);
-            }
-        }
 
         private static void sendMsg(string mobileText)
         {

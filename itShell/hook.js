@@ -93,7 +93,7 @@ function getBuyCount(priceCurrency, price, cnyRace, buyMonyey, inventoryLevel) {
 }
 
 //加入购物车并提交
-function doOrder(buyMonyey) {
+function order(buyMonyey) {
     setCookie();
     var cnyRace = 6.38;
     var data;
@@ -126,6 +126,7 @@ function doOrder(buyMonyey) {
         } else {
             buyCountInfo = getBuyCount(tmpOffers.itemOffered.priceCurrency, tmpOffers.itemOffered.price, cnyRace, buyMonyey, tmpOffers.itemOffered.offers.inventoryLevel);
         }
+        buyCountInfo.prodName = tmpOffers.itemOffered.name;
         data = { cartRequestList: [{ opnId: tmpOffers.itemOffered.name, packageOption: null, quantity: buyCountInfo.buyCount, sparam: "", tiAddtoCartSource: "ti.com-productfolder" }], currency: "CNY" };
     } else {
         //库存
@@ -154,6 +155,7 @@ function doOrder(buyMonyey) {
                 break;
             }
         }
+        buyCountInfo.prodName = productCodePost;
         data = { cartRequestList: [{ opnId: productCodePost, packageOption: "CTX", quantity: buyCountInfo.buyCount, sparam: "", tiAddtoCartSource: "store-pdp" }], currency: "CNY" };
     }
     //加入购物车
@@ -174,9 +176,11 @@ function doOrder(buyMonyey) {
         return false;
     }
     console.log(data, cardData, buyCountInfo);
+    setTimeout(() => {
+        location.href = "https://www.ti.com.cn/samlsinglesignon/saml/alias/ticn/?site=ti&samlPage=cart&dotcomCartId=" + cardData.cartId + "&contShopUrl=" + encodeURIComponent(location.href);
+    }, 100);
     return { cardData, buyCountInfo };
 }
-// location.href = "https://www.ti.com.cn/samlsinglesignon/saml/alias/ticn/?site=ti&samlPage=cart&dotcomCartId=" + datas.cartId + "&contShopUrl=https%3A%2F%2Fwww.ti.com.cn%2Fproduct%2Fcn%2FLM10%3FkeyMatch%3DLM10%26tisearch%3Dsearch-everything%26usecase%3DGPN"
 //检查购物车，删除不要的
 function checkCart(prodName, quantity) {
     var entrys = $.find("a[id^=actionEntry_]");
@@ -213,11 +217,13 @@ function checkCart(prodName, quantity) {
             })
         }
     }
+    setTimeout(() => {
+        location.href = "https://www.ti.com.cn/store/ti/zh/cart/checkout";
+    }, 100)
     return true;
 }
-//location.href="https://www.ti.com.cn/store/ti/zh/cart/checkout";
 //地址
-function buy1() {
+function deliveryAddress() {
     setCookie();
     data = {
         addressType: "Business",
@@ -266,11 +272,13 @@ function buy1() {
     form.companyName.value = data.companyName;
     form.companyUrl.value = data.companyUrl;
     form.phoneIsMobile.checked = data.phoneIsMobile;
-    $("#paid-shipping-address-select").removeAttr("disabled").click();
+    setTimeout(() => {
+        $("#paid-shipping-address-select").removeAttr("disabled").click();
+    }, 100);
     return true;
 }
 //发票
-function buy2() {
+function taxInvoice() {
     setCookie();
     data = {
         type: "SPECIALPAPERINVOICE",
@@ -295,7 +303,7 @@ function buy2() {
     $("#special-invoice").val(data.type).change();
     $("#cmpCheckboxflag").click();
     $("#saveVatInvoice").click();
-    form.type.value=data.type;
+    form.type.value = data.type;
     form.recipient.value = data.recipient;
     form.taxRegistrationNumber.value = data.taxRegistrationNumber;
     form.registrationAddress.value = data.registrationAddress;
@@ -314,11 +322,13 @@ function buy2() {
     form["vatInvoiceAddress.postcode"].value = data["vatInvoiceAddress.postcode"];
 
     $("#tax-invoice-submit").removeAttr("disabled").click();
-    $(".modal-default button[type=submit]").click();
+    setTimeout(() => {
+        $(".modal-default button[type=submit]").click();
+    }, 100);
     return true;
 }
 //类型
-function buy3() {
+function regulations() {
     setCookie();
     var form = document.getElementById("regulations-form");
     var crs = $("#checkout-regulations-select");
@@ -332,43 +342,48 @@ function buy3() {
     form.militaryFlag.value = "No";
     form.militaryFlag[0].disabled = false;
     form.militaryFlag[1].disabled = false;
-    var btn = document.getElementById("regulations-submit-btn");
-    btn.disabled = false;
-    btn.click();
+    setTimeout(() => {
+        var btn = document.getElementById("regulations-submit-btn");
+        btn.disabled = false;
+        btn.click();
+    }, 100);
     return true;
 }
 
 //快递
-function buy4() {
+function deliveryMethod() {
     setCookie();
     var delivery = $("#delivery_method");
     delivery[0].selectedIndex = 0;
     delivery.change();
     $("#terms_accept").click();
-    location.href = "https://www.ti.com.cn/store/ti/zh/checkout/buy/multi/delivery-method/select?delivery_method=v2-china-INT-EH&termsAccepted=Yes";
+    setTimeout(() => {
+        location.href = "https://www.ti.com.cn/store/ti/zh/checkout/buy/multi/delivery-method/select?delivery_method=v2-china-INT-EH&termsAccepted=Yes";
+    }, 100);
     return true;
 }
 
 //支付
-function buy5() {
+function paymentMethod() {
     setCookie();
     $("#payment-method-wechatpay").click();
-    $("form button:visible").click();
+    setTimeout(() => {
+        $("form button:visible").click();
+    }, 100);
     return true;
 }
 
 //获取订单信息
-function getOrderInfo(){
-    if(!addJquery()){
+function orderInfo() {
+    if (!addJquery()) {
         console.log("no jquery");
-        setTimeout(getOrderInfo,1000);
         return false;
     }
     var payAddr = $("iframe").attr("src");
     var tiOrderCode = $("#tiOrderCode").val();
-    var orderTotal=$(".order-total").text().trim();
-    if(payAddr && tiOrderCode && orderTotal){
-        return {payAddr,tiOrderCode,orderTotal};
+    var orderTotal = $(".order-total").text().trim();
+    if (payAddr && tiOrderCode && orderTotal) {
+        return { payAddr, tiOrderCode, orderTotal };
     }
     console.log("error data");
     return false;
