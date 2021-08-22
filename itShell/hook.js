@@ -1,6 +1,6 @@
 
 var domains = [".ti.com", "www.ti.com.cn", ".ti.com.cn", "www.ti.com"];
-console.log("hook is loaded", new Date());
+console.log("hook is loaded", new Date().toLocaleString());
 function addJquery() {
     if (typeof jQuery == 'undefined') {
         var s = document.createElement('script');
@@ -24,9 +24,11 @@ function setCookie() {
 function login(username, password) {
     if (!username) {
         console.log("登录用户名呢？");
+        return false;
     }
     if (!password) {
         console.log("登录用密码呢？");
+        return false;
     }
     setCookie();
     $.post(document.forms[0].action, "pf.username=" + username + "&pf.pass=" + password + "&pf.adapterId=IDPAdapterHTMLFormCIDStandard", function (d) {
@@ -36,6 +38,7 @@ function login(username, password) {
         document.write(d);
         document.forms[0].submit()
     })
+    return true;
 }
 var pageData, tmpOffers, currencyExchangeRate, storeCustomReelFee;
 function hasTmpOffers() {
@@ -101,10 +104,11 @@ function order(buyMonyey) {
     var buyCountInfo;
     if (addToCartForm.length == 0) {
         var ndata = hasTmpOffers();
-        if (ndata == null) {
+        if (!ndata) {
             console.log("找不到数据", new Date());
             return false;
         }
+        console.log(JSON.stringify(ndata));
         if (typeof currencyExchangeRate != "undefined") {
             currencyExchangeRate.forEach(item => {
                 if (item.name == "CNY") {
@@ -175,7 +179,7 @@ function order(buyMonyey) {
     if (!cardData) {
         return false;
     }
-    console.log(data, cardData, buyCountInfo);
+    console.log(JSON.stringify({cardData, buyCountInfo} ));
     setTimeout(() => {
         location.href = "https://www.ti.com.cn/samlsinglesignon/saml/alias/ticn/?site=ti&samlPage=cart&dotcomCartId=" + cardData.cartId + "&contShopUrl=" + encodeURIComponent(location.href);
     }, 100);
@@ -183,7 +187,9 @@ function order(buyMonyey) {
 }
 //检查购物车，删除不要的
 function checkCart(prodName, quantity) {
+    console.log("checkCart => ",prodName,quantity);
     var entrys = $.find("a[id^=actionEntry_]");
+    var ret = true;
     for (var i = 0; i < entrys.length; i++) {
         var entry = entrys[i];
         if ($(entry).attr("data-entry-product-code") == prodName) {
@@ -201,7 +207,10 @@ function checkCart(prodName, quantity) {
                     async: false,
                     data: updateData,
                     success: function (datas) {
-
+                        ret = true;
+                    },error:function(e){
+                        console.log(e);
+                        ret = false;
                     }
                 })
 
@@ -212,15 +221,21 @@ function checkCart(prodName, quantity) {
                 method: 'GET',
                 async: false,
                 success: function (datas) {
-
+                    ret = true;
+                },error:function(e){
+                    console.log(e);
+                    ret = false;
                 }
             })
         }
+        if(!ret){
+            break;
+        }
     }
     setTimeout(() => {
-        location.href = "https://www.ti.com.cn/store/ti/zh/cart/checkout";
+        $("#tiCartCalculate_Checkout_top").click();
     }, 100)
-    return true;
+    return ret;
 }
 //地址
 function deliveryAddress() {
@@ -383,7 +398,9 @@ function orderInfo() {
     var tiOrderCode = $("#tiOrderCode").val();
     var orderTotal = $(".order-total").text().trim();
     if (payAddr && tiOrderCode && orderTotal) {
-        return { payAddr, tiOrderCode, orderTotal };
+        data = { payAddr, tiOrderCode, orderTotal };
+        console.log(JSON.stringify(data));
+        return data;
     }
     console.log("error data");
     return false;

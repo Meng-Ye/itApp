@@ -384,67 +384,33 @@ namespace ItApp
         /// <returns>password</returns>
 
         public static string ReadPassword()
-
         {
-
             char[] revisekeys = new char[3];
-
             revisekeys[0] = (char)0x08;
-
             revisekeys[1] = (char)0x20;
-
             revisekeys[2] = (char)0x08;
-
-
-
             StringBuilder sb = new StringBuilder();
-
             while (true)
-
             {
-
                 ConsoleKeyInfo kinfo = Console.ReadKey(true);
-
-
-
                 if (kinfo.Key == ConsoleKey.Enter)
-
                 {
-
                     break;
-
                 }
-
-
-
                 if (kinfo.Key == ConsoleKey.Backspace)
-
                 {
-
                     if (sb.Length != 0)
-
                     {
-
                         int rIndex = sb.Length - 1;
-
                         sb.Remove(rIndex, 1);
-
                         Console.Write(revisekeys);
-
                     }
-
                     continue;
-
                 }
-
                 sb.Append(Convert.ToString(kinfo.KeyChar));
-
                 Console.Write("*");
-
             }
-
             return sb.ToString();
-
         }
 
         #endregion
@@ -453,7 +419,6 @@ namespace ItApp
         private static string CONFIG = "Config";
         private static string CONFIG_DB = "Config/__DB";
         private static string API_PORT = "50001";
-        private static string WS_PORT = "50000";
         private static bool runTest = false;
         private static AppInfo appInfo;
         private static Page page;
@@ -466,11 +431,9 @@ namespace ItApp
         private static string otPath = "opn" + "inventory";
         private static string web = "https://www.ti.com.cn";
         private static string slfPath = "secure" + "-" + "link" + "-" + "forward";
-        private static string store = "store"; 
+        private static string store = "store";
         private static string product = "product";
         private static string loginScript;
-         
-        private static Thread changeThread;
         private static string prodName;
 
         public static async Task Main(string[] args)
@@ -663,13 +626,13 @@ namespace ItApp
             }
 
             ViewPortOptions viewPortOptions = new ViewPortOptions();
-            viewPortOptions.Width = 1440;
-            viewPortOptions.Height = 1280;
-            var options = new LaunchOptions { Headless = false, Devtools = true, ExecutablePath = executablePath, DefaultViewport = viewPortOptions };
+            viewPortOptions.Width = 1920;
+            viewPortOptions.Height = 1080;
+            var options = new LaunchOptions { Headless = true,Devtools = true, ExecutablePath = executablePath, DefaultViewport = viewPortOptions };
 
             var browser = await Puppeteer.LaunchAsync(options);
-            browser.TargetCreated += Browser_TargetCreated;
-            browser.TargetChanged += Browser_TargetCreated;
+            //browser.TargetCreated += Browser_TargetCreated;
+            //browser.TargetChanged += Browser_TargetCreated;
 
             page = (await browser.PagesAsync())[0];
             page.DefaultTimeout = 3000000 * 60;
@@ -677,7 +640,10 @@ namespace ItApp
 
             await page.SetRequestInterceptionAsync(true);
             page.Request += Page_Request;
-            prodName = hit;
+            page.Console += Page_Console;
+            page.Error += Page_Error;
+            page.PageError += Page_PageError;
+            prodName = item;
             var prodUrl = $"{web}/{product}/cn/{prodName}";
             if (jt != null)
             {
@@ -685,15 +651,204 @@ namespace ItApp
                 Console.WriteLine($"开始下单：{prodName}");
                 prodUrl = $"{web}/{store}/ti/zh/p/{product}/?p={prodName}";
             }
-            else {
+            else
+            {
                 Console.WriteLine($"开始下单：{item}->{hit}");
             }
             await page.GoToAsync($"{web}/{slfPath}/?gotoUrl={prodUrl}");
 
+
+
+            nTimer.Elapsed += new ElapsedEventHandler(async (s, e1) =>
+            {
+                await watchPage();
+            });
+            nTimer.Enabled = true;
+
+            while (!browser.IsClosed)
+            {
+                Thread.Sleep(100);
+            }
+
             Console.WriteLine("按任意键退出");
             Console.ReadLine();
-            return;
 
+
+        }
+
+        private static void Page_PageError(object sender, PageErrorEventArgs e)
+        {
+            Console.WriteLine($"【ERROR】=> {page.Url} => {e.Message}");
+        }
+
+        private static void Page_Error(object sender, PuppeteerSharp.ErrorEventArgs e)
+        {
+            Console.WriteLine($"【ERROR】=> {page.Url} => {e.Error}");
+        }
+
+        private static void Page_Console(object sender, ConsoleEventArgs e)
+        {
+            Console.WriteLine($"【CONSOLE】=> {page.Url} => {e.Message.Text}");
+        }
+
+        static double interval = 10000;
+        static System.Timers.Timer nTimer = new System.Timers.Timer(interval);
+        private static string buyCount;
+        private static Dictionary<string, int> watchPageDic = new Dictionary<string, int>();
+
+        private static async Task watchPage()
+        {
+            nTimer.Enabled = false;
+            string url = page.Url;
+            string type = getUrlType(url);
+            try
+            {
+                await page.WaitForNavigationAsync(new NavigationOptions() { Timeout = 90000 });
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"【ERROR】=> {page.Url} , {e.StackTrace}");
+            }
+            if (type != null)
+            {
+                if (watchPageDic.ContainsKey(type))
+                {
+                    watchPageDic[type] = watchPageDic[type] + 1;
+                    if (watchPageDic[type] < 30)
+                    {
+                        nTimer.Enabled = true;
+                        return;
+                    }
+                    else
+                    {
+                        watchPageDic.Remove(type);
+                        await page.ReloadAsync();
+                        nTimer.Enabled = true;
+                        return;
+                    }
+                }
+                watchPageDic.Add(type, 0);
+                Console.WriteLine($"url={url},type={type}");
+                try
+                {
+                    var waitForFunctionOtions = new WaitForFunctionOptions() { Timeout = 60000, PollingInterval = 20000 };
+                    if (loginScript == null)
+                    {
+                        loginScript = Get($"http://{appInfo.ServerHost}:{API_PORT}/hook.js");
+                    }
+                    System.Console.WriteLine("是目标页面，开始注入jQuery脚本");
+                    await page.EvaluateExpressionAsync(loginScript);
+                    await page.WaitForFunctionAsync("addJquery", waitForFunctionOtions);
+                    System.Console.WriteLine("jQuery注入完成");
+                    Console.WriteLine(page);
+                    System.Console.WriteLine($"界面类型为：{type}");
+
+
+                    switch (type)
+                    {
+
+                        case "login":
+                            System.Console.WriteLine($"操作登录");
+                            var username = appInfo.ItUser;
+                            if (username == null)
+                            {
+                                username = "fzaw2008@163.com";
+                            }
+                            var password = appInfo.ItPwd;
+                            if (password == null)
+                            {
+                                password = "Wilson1234";
+                            }
+                            await page.EvaluateExpressionAsync($"login('{username}','{password}')");
+                            break;
+                        case "order":
+                            try
+                            {
+                                await page.WaitForNavigationAsync(new NavigationOptions() { Timeout = 90000 });
+                            }
+                            catch (Exception e)
+                            {
+                                Console.WriteLine($"【ERROR】=> {page.Url} , {e.StackTrace}");
+                            }
+                            System.Console.WriteLine($"操作下单");
+                            if (appInfo.OrderMoney == null)
+                            {
+                                appInfo.OrderMoney = "100";
+                            }
+                            var orderResult = await page.EvaluateExpressionAsync($"order({appInfo.OrderMoney})");
+                            if (orderResult.Type == JTokenType.Boolean)
+                            {
+                                watchPageDic.Remove(type);
+                                await page.ReloadAsync();
+                            }
+                            else
+                            {
+                                JObject data = (JObject)orderResult;
+                                if (data["cardData"]["statusCode"].ToString() == "200")
+                                {
+                                    var cardId = data["cardData"]["cartId"].ToString();
+                                    buyCount = data["buyCountInfo"]["buyCount"].ToString();
+                                    prodName = data["buyCountInfo"]["prodName"].ToString();
+                                    var singlePrice = data["buyCountInfo"]["singlePrice"].ToString();
+                                    var inventoryLevel = data["buyCountInfo"]["inventoryLevel"].ToString();
+                                    var totalMoney = Int32.Parse(buyCount) * Double.Parse(singlePrice);
+                                    Console.WriteLine($"{prodName}加入购物车完成：总库存{inventoryLevel},加入 {buyCount} ，共 {totalMoney} 元");
+                                    Console.WriteLine(orderResult.ToString());
+                                }
+                            }
+                            break;
+                        case "checkCart":
+                            System.Console.WriteLine($"操作购物车");
+                            if (prodName != string.Empty)
+                            {
+                                //await page.EvaluateExpressionAsync($"checkCart('{prodName}','{buyCount}')");
+                                await page.WaitForFunctionAsync("checkCart", waitForFunctionOtions, prodName, buyCount);
+                                await page.ClickAsync("#tiCartCalculate_Checkout_top");
+                            }
+                            break;
+                        case "orderInfo":
+                            System.Console.WriteLine($"操作获取订单信息");
+                            var orderInfo = await page.WaitForFunctionAsync("orderInfo", waitForFunctionOtions);
+                            var orderInfoObj = await orderInfo.JsonValueAsync();
+                            Console.WriteLine($"下单结果：{orderInfoObj}");
+                            JObject orderObj = (JObject)orderInfoObj;
+                            var payAddress = orderObj["payAddr"].ToString();
+                            var tiOrderCode = orderObj["tiOrderCode"].ToString();
+                            var orderTotal = orderObj["orderTotal"].ToString();
+                            var qrcode = $"OrderImg/{tiOrderCode}-{DateTime.Now.ToString("yyyyMMddhhmmss")}.png";
+                            await screenshots(page, qrcode);
+                            sendMsg($"【{appInfo.AppName}】软件抢单成功，订单编号【{tiOrderCode}】，产品名称【{prodName}】，下单用户名【{appInfo.ItUser}】,订单总额【XXXX】，支付二维码 {payAddress}。");
+
+                            break;
+                        default:
+                            System.Console.WriteLine($"操作{type}");
+                            await page.WaitForFunctionAsync(type, waitForFunctionOtions);
+                            break;
+                    }
+                    System.Console.WriteLine("这波操作结束");
+
+                }
+                catch (Exception exception)
+                {
+                    Console.WriteLine(exception.StackTrace);
+                    watchPageDic.Remove(type);
+                    await page.ReloadAsync();
+
+                }
+                finally
+                {
+                    Thread.Sleep(5000);
+                    nTimer.Enabled = !page.IsClosed && page.Browser.IsConnected;
+                }
+
+            }
+            else
+            {
+                System.Console.WriteLine($"找不到操作目标，地址为：{page.Url}");
+                System.Console.WriteLine("这个界面作什么也没有做");
+            }
+
+            nTimer.Enabled = !page.IsClosed && page.Browser.IsConnected;
         }
 
         private static void Page_Request(object sender, RequestEventArgs e)
@@ -744,19 +899,22 @@ namespace ItApp
             else
             {
                 ResourceType responseType = e.Request.ResourceType;
-                if (responseType == ResourceType.Script || responseType == ResourceType.Image || responseType == ResourceType.Img || responseType == ResourceType.Font || responseType == ResourceType.StyleSheet || responseType == ResourceType.Other)
+                if (responseType == ResourceType.Script || responseType == ResourceType.Image || responseType == ResourceType.Img || responseType == ResourceType.Font || responseType == ResourceType.StyleSheet)
                 {
-                    double interval = 15000;
+                    double interval = 45000;
                     System.Timers.Timer timerTimeout = new System.Timers.Timer(interval);
                     timerTimeout.Elapsed += new ElapsedEventHandler((s, e1) =>
                     {
-                        // Console.WriteLine($"请求 {e.Request.Url } => {e.Request.ResourceType} 超过{interval / 1000}秒，强制取消。");
-                        e.Request.AbortAsync();
+                        if (e.Request.Response != null && !e.Request.Response.Ok)
+                        {
+                            Console.WriteLine($"【INFO】=> 页面：{page.Url} [ 请求 {e.Request.Url } => {e.Request.ResourceType} 超过{interval / 1000}秒，强制取消。]");
+                            e.Request.AbortAsync();
+                        }
                         timerTimeout.Enabled = false;
                     });
                     timerTimeout.Enabled = true;
                 }
-                // Console.WriteLine($"url:{ e.Request.Url},type:{ e.Request.ResourceType}, method:{e.Request.Method}");
+                Console.WriteLine($"【INFO】=> 页面：{page.Url} [ 请求:{ e.Request.Url},type:{ e.Request.ResourceType}]");
                 e.Request.ContinueAsync();
             }
 
@@ -808,120 +966,15 @@ namespace ItApp
 
 
 
-        private static void Browser_TargetCreated(object sender, TargetChangedArgs e)
-        {
-            if (e.Target.Url.IndexOf(".ti.com") != -1)
-            {
-                async Task change()
-                {
-                    var waitForFunctionOtions = new WaitForFunctionOptions() { Timeout = 2000, PollingInterval = 5000 };
-                    if (loginScript == null)
-                    {
-                        loginScript = Get($"http://{appInfo.ServerHost}:{API_PORT}/hook.js");
-                    }
-                    System.Console.WriteLine("是目标页面，开始注入jQuery脚本");
-                    await page.WaitForNavigationAsync();
-                    await page.EvaluateExpressionAsync(loginScript);
-                    await page.WaitForFunctionAsync("addJquery", waitForFunctionOtions);
-                    System.Console.WriteLine("jQuery注入完成");
-                    string url = page.Url;
-                    string type = getUrlType(url);
-                    System.Console.WriteLine($"界面类型为：{type}");
-                    string buyCount = "1";
-                    string prodName = "";
-                    if (type != null)
-                    {
-                        switch (type)
-                        {
+        //private static void Browser_TargetCreated(object sender, TargetChangedArgs e)
+        //{
+        //    if (e.Target.Url.IndexOf(".ti.com") != -1)
+        //    {
 
-                            case "login":
-                                System.Console.WriteLine($"操作登录");
-                                var username = appInfo.ItUser;
-                                if (username == null)
-                                {
-                                    username = "fzaw2008@163.com";
-                                }
-                                var password = appInfo.ItPwd;
-                                if (password == null)
-                                {
-                                    password = "Wilson1234";
-                                }
-                                await page.EvaluateExpressionAsync($"login('{username}','{password}')");
-                                break;
-                            case "order":
-                                System.Console.WriteLine($"操作下单");
-                                if (appInfo.OrderMoney == null)
-                                {
-                                    appInfo.OrderMoney = "100";
-                                }
-                                var orderResult = await page.WaitForFunctionAsync("order", waitForFunctionOtions, appInfo.OrderMoney);
-                                var json = await orderResult.JsonValueAsync();
-                                JObject data = (JObject)json;
-                                if (data["cardData"]["statusCode"].ToString() == "200")
-                                {
-                                    var cardId = data["cardData"]["cartId"].ToString();
-                                    buyCount = data["buyCountInfo"]["buyCount"].ToString();
-                                    prodName = data["buyCountInfo"]["prodName"].ToString();
-                                    var singlePrice = data["buyCountInfo"]["singlePrice"].ToString();
-                                    var inventoryLevel = data["buyCountInfo"]["inventoryLevel"].ToString();
-                                    var totalMoney = Int32.Parse(buyCount) * Double.Parse(singlePrice);
-                                    Console.WriteLine($"{prodName}加入购物车完成：总库存{inventoryLevel},加入 {buyCount} ，共 {totalMoney} 元");
-                                    Console.WriteLine(json.ToString());
-                                }
-                                break;
-                            case "checkCart":
-                                System.Console.WriteLine($"操作购物车");
-                                if (prodName != string.Empty)
-                                {
-                                    await page.WaitForFunctionAsync("checkCart", waitForFunctionOtions, prodName, buyCount);
-                                }
-                                break;
-                            case "orderInfo":
-                                System.Console.WriteLine($"操作获取订单信息");
-                                var orderInfo = await page.WaitForFunctionAsync("orderInfo", waitForFunctionOtions);
-                                var orderInfoObj = await orderInfo.JsonValueAsync();
-                                Console.WriteLine($"下单结果：{orderInfoObj}");
-                                JObject orderObj = (JObject)orderInfoObj;
-                                var payAddress = orderObj["payAddr"].ToString();
-                                var tiOrderCode = orderObj["tiOrderCode"].ToString();
-                                var orderTotal = orderObj["orderTotal"].ToString();
-                                var qrcode = $"OrderImg/{tiOrderCode}-{DateTime.Now.ToString("yyyyMMddhhmmss")}.png";
-                                await screenshots(page, qrcode);
-                                sendMsg($"【{appInfo.AppName}】软件抢单成功，订单编号【{tiOrderCode}】，产品名称【{prodName}】，下单用户名【{appInfo.ItUser}】,订单总额【XXXX】，支付二维码 {payAddress}。");
+        //        Console.WriteLine("browser create " + e.Target.Url);
+        //    }
 
-                                break;
-                            default:
-                                System.Console.WriteLine($"操作{type}");
-                                await page.WaitForFunctionAsync(type, waitForFunctionOtions);
-                                break;
-                        }
-                        System.Console.WriteLine("这波操作结束");
-                        return;
-
-                    }else{
-                        System.Console.WriteLine($"找不到操作目标，地址为：{url}");
-                    }
-
-                    System.Console.WriteLine("这个界面作什么也没有做");
-
-                };
-                if (changeThread!=null && changeThread.IsAlive)
-                {
-                    changeThread.Abort();
-                    changeThread = null;
-                }
-                if (changeThread == null) {
-                    changeThread = new Thread(async () => {
-                        await change();
-                    });
-                    changeThread.Start();
-                }           
-                
-                
-                Console.WriteLine("browser create " + e.Target.Url);
-            }
-
-        }
+        //}
 
 
         private static void sendMsg(string mobileText)
