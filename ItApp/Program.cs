@@ -471,6 +471,8 @@ namespace ItApp
         private static string loginScript;
          
         private static Thread changeThread;
+        private static string prodName;
+
         public static async Task Main(string[] args)
         {
             if (runTest)
@@ -675,15 +677,16 @@ namespace ItApp
 
             await page.SetRequestInterceptionAsync(true);
             page.Request += Page_Request;
+            prodName = hit;
             var prodUrl = $"{web}/{product}/cn/{prodName}";
             if (jt != null)
             {
-                Console.WriteLine($"开始下单：{hit}");
+                prodName = jt.ToString();
+                Console.WriteLine($"开始下单：{prodName}");
                 prodUrl = $"{web}/{store}/ti/zh/p/{product}/?p={prodName}";
             }
             else {
                 Console.WriteLine($"开始下单：{item}->{hit}");
-
             }
             await page.GoToAsync($"{web}/{slfPath}/?gotoUrl={prodUrl}");
 
