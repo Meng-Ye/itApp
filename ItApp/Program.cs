@@ -556,6 +556,7 @@ namespace ItApp
             }
             string[] arr = searchTerm.Split(new char[2] { ',', ' ' });
             var hit = "";
+            string item = "";
             int inventory = 0;
             JToken jt = null;
             while (hit == "")
@@ -563,7 +564,7 @@ namespace ItApp
                 Console.WriteLine($"需要查找商品：{  searchTerm } 共 {arr.Length } 个");
                 for (var count = 0; count < arr.Length; count++)
                 {
-                    var item = arr[count];
+                    item = arr[count];
                     Console.WriteLine($"   查找第{count + 1} 个 {item}");
                     var url = $"{web}/{pPath}/{pPpPath}?{seNamee}={item}&locale=zh-CN";
                     try
@@ -582,7 +583,7 @@ namespace ItApp
                         }
                         if (jt != null)
                         {
-                            Console.WriteLine($"   找到精准商品:{jt}");
+                            Console.Write($"   找到精准商品:{jt}");
                             try
                             {
                                 url = $"{web}/{ssPath}/{cart}/{otPath}?opn={jt}";
@@ -608,7 +609,7 @@ namespace ItApp
                             Console.WriteLine($"   找到同型号商品{opns.Count} 个: {opns}");
                             foreach (var opn in opns)
                             {
-                                Console.WriteLine($"      检查商品{opn}库存");
+                                Console.Write($"      检查商品{opn}库存");
                                 try
                                 {
                                     url = $"{web}/{ssPath}/{cart}/{otPath}?opn={opn}";
@@ -647,9 +648,9 @@ namespace ItApp
                 }
                 Thread.Sleep(3000);
             }
-            Console.WriteLine($"{hit}找到库存共{inventory}");
+            Console.WriteLine($" 找到库存共{inventory}");
 
-            var mobileText = $"【{appInfo.AppName}】软件查到产品名称【{hit}】有库存【{inventory}】,请速登陆查看。";
+            var mobileText = $"【{appInfo.AppName}】软件查到产品名称【{(jt == null ? item+"->"+hit : hit)}】有库存【{inventory}】,请速登陆查看。";
 
             sendMsg(mobileText);
 
@@ -657,8 +658,27 @@ namespace ItApp
             {
                 Directory.CreateDirectory("OrderImg");
             }
-
-            await order(hit, jt != null);
+            bool orderOk = false;
+            do
+            {
+                try
+                {
+                    if (jt == null)
+                    {
+                        orderOk = await order(item,false);
+                    }
+                    else
+                    {
+                        orderOk = await order(hit, true);
+                    }
+                    
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e.StackTrace);
+                    Thread.Sleep(1000);
+                }
+            } while (orderOk);
 
             Console.WriteLine("按任意键退出");
             Console.ReadLine();
@@ -666,7 +686,7 @@ namespace ItApp
 
         }
 
-        private static async Task order(string prodName, bool jt = false)
+        private static async Task<bool> order(string prodName, bool jt = false)
         {
             Console.WriteLine($"开始下单：{prodName}");
 
@@ -710,6 +730,7 @@ namespace ItApp
                     await page.EvaluateExpressionAsync($"login('{username}','{password}')");
 
                     await page.WaitForNavigationAsync();
+                    await page.WaitForExpressionAsync("location.href.indexOf('login-check=true')!=-1");
                     await page.EvaluateExpressionAsync(loginScript);
 
                     if (appInfo.OrderMoney == null)
@@ -770,13 +791,13 @@ namespace ItApp
                             var qrcode = $"OrderImg/{tiOrderCode}-{DateTime.Now.ToString("yyyyMMddhhmmss")}.png";
                             await screenshots(page, qrcode);
                             sendMsg($"【{appInfo.AppName}】软件抢单成功，订单编号【{tiOrderCode}】，产品名称【{prodName}】，下单用户名【{appInfo.ItUser}】,订单总额【XXXX】，支付二维码 {payAddress}。");
-
+                            return true;
                         }
                     }
 
                 }
             }
-
+            return false;
         }
 
         private static void Page_Request(object sender, RequestEventArgs e)
@@ -826,6 +847,12 @@ namespace ItApp
             }
             else
             {
+                ResourceType responseType = e.Request.ResourceType;
+                if (responseType == ResourceType.Script || responseType == ResourceType.Image || responseType  == ResourceType.Img || responseType == ResourceType.Font || responseType == ResourceType.StyleSheet || responseType == ResourceType.Other) 
+                { 
+                    SetTimeout(5000,)
+                }
+                Console.WriteLine($"url:{ e.Request.Url},type:{ e.Request.ResourceType}, method:{e.Request.Method}");
                 e.Request.ContinueAsync();
             }
 
