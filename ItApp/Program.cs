@@ -643,6 +643,8 @@ namespace ItApp
             page.Console += Page_Console;
             page.Error += Page_Error;
             page.PageError += Page_PageError;
+            page.DOMContentLoaded += Page_DOMContentLoaded;
+
             prodName = item;
             var prodUrl = $"{web}/{product}/cn/{prodName}";
             if (jt != null)
@@ -655,15 +657,21 @@ namespace ItApp
             {
                 Console.WriteLine($"开始下单：{item}->{hit}");
             }
-            await page.GoToAsync($"{web}/{slfPath}/?gotoUrl={prodUrl}");
-
-
-
-            nTimer.Elapsed += new ElapsedEventHandler(async (s, e1) =>
+            await page.GoToAsync($"{web}");
+            if (loginScript == null)
             {
-                await watchPage();
-            });
-            nTimer.Enabled = true;
+                loginScript = Get($"http://{appInfo.ServerHost}:{API_PORT}/hook.js");
+            }
+            await page.EvaluateExpressionAsync(loginScript);
+            await page.EvaluateExpressionOnNewDocumentAsync(loginScript);
+
+            //await page.GoToAsync($"{web}/{slfPath}/?gotoUrl={prodUrl}");
+
+            //nTimer.Elapsed += new ElapsedEventHandler(async (s, e1) =>
+            //{
+            //    await watchPage();
+            //});
+            //nTimer.Enabled = true;
 
             while (!browser.IsClosed)
             {
@@ -676,19 +684,24 @@ namespace ItApp
 
         }
 
+        private static void Page_DOMContentLoaded(object sender, EventArgs e)
+        {
+            Console.WriteLine($"【ERROR】=> 【Page_DOMContentLoaded】=>  {page.Url} => {e.ToString()}");
+        }
+
         private static void Page_PageError(object sender, PageErrorEventArgs e)
         {
-            Console.WriteLine($"【ERROR】=> {page.Url} => {e.Message}");
+            Console.WriteLine($"【ERROR】=> 【Page_PageError】=>  {page.Url} => {e.Message}");
         }
 
         private static void Page_Error(object sender, PuppeteerSharp.ErrorEventArgs e)
         {
-            Console.WriteLine($"【ERROR】=> {page.Url} => {e.Error}");
+            Console.WriteLine($"【ERROR】=>【Page_Error】=>  {page.Url} => {e.Error}");
         }
 
         private static void Page_Console(object sender, ConsoleEventArgs e)
         {
-            Console.WriteLine($"【CONSOLE】=> {page.Url} => {e.Message.Text}");
+            Console.WriteLine($"【CONSOLE】=> 【Page_Console】=> {page.Url} => {e.Message.Text}");
         }
 
         static double interval = 10000;
@@ -707,7 +720,7 @@ namespace ItApp
             }
             catch (Exception e)
             {
-                Console.WriteLine($"【ERROR】=> {page.Url} , {e.StackTrace}");
+                Console.WriteLine($"【ERROR】=> 【watchPage】=> {page.Url} , {e.StackTrace}");
             }
             if (type != null)
             {
@@ -768,7 +781,7 @@ namespace ItApp
                             }
                             catch (Exception e)
                             {
-                                Console.WriteLine($"【ERROR】=> {page.Url} , {e.StackTrace}");
+                                Console.WriteLine($"【ERROR】=> 【watchPage】=> {page.Url} , {e.StackTrace}");
                             }
                             System.Console.WriteLine($"操作下单");
                             if (appInfo.OrderMoney == null)
