@@ -2,6 +2,7 @@
 using Newtonsoft.Json.Linq;
 using PuppeteerSharp;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -51,41 +52,116 @@ namespace WinFormsApp1
         private string product = "product";
         private string store = "store";
         private string cart = "cart";
-        private string buyCount;
-        private string prodName;
         private string multi = "multi";
         private string payment = "payment";
         private string delivery = "delivery";
         private string method = "method";
-
-        private string appName = "TI-01";
+        private int prodIndex = 0;
+        private string buyCount;
+        private string prodName;
+        private string[] prodNameArr;
         private string tiOrderCode;
-        private string userName = "fzaw2008@163.com";
-        private string password = "Wilson1234";
+        private string userName;
+        private string password;
+        private string server;
         private Page page;
         private string workDir = @"D:\eclipse-workspace";
-        private int prodIndex = 0;
+        //private string workDir = @"D:\eclipse-workspace";
 
-        private void button1_Click(object sender, EventArgs e)
-        {
-            var text1 = this.searchProdTextBox.Text.Trim();
+
+        private bool valid() {
+            
+            string searchProdStr = this.searchProdTextBox.Text.Trim();
             var text2 = this.buyMoneyTextBox.Text.Trim();
-            if (text1 == string.Empty)
+            if (searchProdStr == string.Empty)
             {
                 MessageBox.Show("商品信息为空，请先输入要搜索的商品");
-                return;
+                return false;
             }
             if (text2 == string.Empty)
             {
                 MessageBox.Show("商品金额为空，请先输入金额");
-                return;
+                return false;
             }
-            int result = 0;
-            if (!Int32.TryParse(text2, out result))
+            if (!Int32.TryParse(text2, out int result))
             {
                 MessageBox.Show("商品金额必须是正整数");
+                return false;
+            }
+
+            if (result < 100) 
+            {
+                MessageBox.Show("商品金额太小了，至少100元");
+                return false;
+            }
+
+            userName = this.tiUser.Text.Trim();
+            password = this.tiPwd.Text.Trim();
+            string appUser = this.appUser.Text.Trim();
+            string appPwd = this.appPwd.Text.Trim();
+
+            if (userName == string.Empty)
+            {
+                MessageBox.Show("网站用户为空，请先输入网站用户");
+                return false;
+            }
+
+            if (appUser == string.Empty)
+            {
+                MessageBox.Show("软件用户为空，请先输入软件用户");
+                return false;
+            }
+
+            if (password == string.Empty)
+            {
+                MessageBox.Show("网站密码为空，请先输入网站密码");
+                return false;
+            }
+            if (appPwd == string.Empty)
+            {
+                MessageBox.Show("软件密码为空，请先输入软件密码");
+                return false;
+            }
+
+            string appName = this.appName.Text.Trim();
+            if (appName == string.Empty)
+            {
+                MessageBox.Show("软件名称为空，请先输入软件名称");
+                return false;
+
+            }
+            server = this.serverHost.Text.Trim();
+            if (server == string.Empty)
+            {
+                MessageBox.Show("服务配置为空，请先确认服务配置");
+                return false;
+            }
+
+            string[] prodNameArr = searchProdStr.Split(new char[] { '\n' });
+            List<string> list = new List<string>();
+            for (int i = 0; i < prodNameArr.Length; i++)
+            {
+                if (prodNameArr[i][0] != '#')
+                {
+                    list.Add(prodNameArr[i]);
+                }
+            }
+            
+            if(list.Count==0)
+            {
+                MessageBox.Show("商品信息为空，请先输入要搜索的商品");
+                return false;
+            }
+            this.prodNameArr = list.ToArray();
+            return true;
+        }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            if (!valid()) {
                 return;
             }
+
             this.startButton.Enabled = false;
             this.scriptTextBox.Clear();
             this.infoRichTextBox.Clear();
@@ -93,7 +169,7 @@ namespace WinFormsApp1
             viewPortOptions.Width = 1920;
             viewPortOptions.Height = 1080;
             prodIndex = 0;
-            prodName = this.searchProdTextBox.Text.Split(new char[] { ',' ,' '})[prodIndex];
+            prodName = this.prodNameArr[prodIndex];
             string executablePath = @$"{workDir}\itApp\ItApp\bin\Debug\Config\chrome-win\chrome.exe";
             if (!File.Exists(executablePath)) {
                 workDir = @"D:\.NET";
@@ -204,7 +280,7 @@ namespace WinFormsApp1
                     string inventory = JsonData["inventory"].ToString();
                     SetRickText($"{prodName}找到库存{JsonData["orderablePartNumber"]} 共{inventory}");
                     string nName = partName != prodName ? (prodName + "->" + partName) : prodName;
-                    var mobileText = $"【{appName}】软件查到产品名称【{nName}】有库存【{inventory}】,请速登陆查看。";
+                    var mobileText = $"【{this.appName.Text.Trim()}】软件查到产品名称【{nName}】有库存【{inventory}】,请速登陆查看。";
 
                     sendMsg(mobileText);
                 }
@@ -223,7 +299,7 @@ namespace WinFormsApp1
                     var payAddress = JsonData["payAddr"].ToString();
                     tiOrderCode = JsonData["tiOrderCode"].ToString();
                     var orderTotal = JsonData["orderTotal"].ToString();
-                    sendMsg($"【{appName}】软件抢单成功，订单编号【{tiOrderCode}】，产品名称【{prodName}】，下单用户名【{userName}】,订单总额【{orderTotal}】，支付二维码 {payAddress}。");
+                    sendMsg($"【{this.appName.Text.Trim()}】软件抢单成功，订单编号【{tiOrderCode}】，产品名称【{prodName}】，下单用户名【{userName}】,订单总额【{orderTotal}】，支付二维码 {payAddress}。");
 
                 }
                 else if (arg.IndexOf("username") != -1)
@@ -251,17 +327,17 @@ namespace WinFormsApp1
                     }
                 }
                 else if (arg.IndexOf("searchTerm") != -1) 
-                {                    
-                    string [] tmp = this.searchProdTextBox.Text.Split(new char[] { ',', ' ' });
-                    if (prodIndex < tmp.Length) {
+                {                   
+                    
+                    if (prodIndex < this.prodNameArr.Length) {
                         prodIndex++;
-                        SetRickText($"{prodName} 暂无库存，开始下一个商品{tmp[prodIndex]}");
-                        prodName = tmp[prodIndex];
+                        SetRickText($"{prodName} 暂无库存，开始下一个商品{this.prodNameArr[prodIndex]}");
+                        prodName = this.prodNameArr[prodIndex];
                     }
                     else
                     {
                         prodIndex = 0;
-                        prodName = tmp[prodIndex];
+                        prodName = this.prodNameArr[prodIndex];
                         SetRickText($"{prodName}暂无库存");
                     }
                     loginScript = null;
@@ -456,6 +532,16 @@ namespace WinFormsApp1
             this.buyMoneyTextBox.Enabled = this.startButton.Enabled;
             running = this.startButton.Enabled;
             
+        }
+
+        private void label3_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void appUser_TextChanged(object sender, EventArgs e)
+        {
+
         }
     }
 }

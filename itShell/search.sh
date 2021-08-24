@@ -2,13 +2,25 @@
 [ $# -ge 1 -a "$1" != "partMatch" ] && {
     for searchTerm in "$@"
     do
-        tmp=$(curl 'https://www.ti.com.cn/search/gpn?searchTerm='$searchTerm'&locale=zh-CN' --compressed -s | jq -r -c ".opns[]")
+        tmp=$(curl 'https://www.ti.com.cn/search/gpn?searchTerm='$searchTerm'&locale=zh-CN' --compressed -s | jq -r -c ".opns[]")        
         array=($tmp)
+        findTerm=0
         for((i=0;i<${#array[@]} ;i++)) ;
         do
-            inventory=$(./checkStore.sh ${array[i]})
-            [ -n "${inventory}" -a "${inventory}" -gt 0 ] && {
-                echo ${inventory}
+            if [ "$searchTerm" == "${array[i]}" ] ; then
+                findTerm=1
+                break;
+            fi
+        done
+        if [ $findTerm -eq 1 ] ; then
+            array=($searchTerm)
+        fi
+        for((i=0;i<${#array[@]} ;i++)) ;
+        do
+            searchTerm=${array[i]}
+            inventory=$(./checkStore.sh $searchTerm)
+            [ "A${inventory}" != "A" -a "A${inventory}" != "A0" ] && {
+                echo "$searchTerm ${inventory}"
                 exit 0
             }
         done   
