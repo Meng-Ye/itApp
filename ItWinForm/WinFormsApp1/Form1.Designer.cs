@@ -40,20 +40,20 @@ namespace WinFormsApp1
             this.buyMoneyTextBox = new System.Windows.Forms.TextBox();
             this.clearCacheButton = new System.Windows.Forms.Button();
             this.groupBox3 = new System.Windows.Forms.GroupBox();
-            this.groupBox4 = new System.Windows.Forms.GroupBox();
-            this.label3 = new System.Windows.Forms.Label();
-            this.label4 = new System.Windows.Forms.Label();
-            this.groupBox5 = new System.Windows.Forms.GroupBox();
-            this.tiUser = new System.Windows.Forms.TextBox();
-            this.tiPwd = new System.Windows.Forms.TextBox();
-            this.appPwd = new System.Windows.Forms.TextBox();
-            this.appUser = new System.Windows.Forms.TextBox();
-            this.label1 = new System.Windows.Forms.Label();
-            this.label5 = new System.Windows.Forms.Label();
-            this.serverHost = new System.Windows.Forms.TextBox();
-            this.appName = new System.Windows.Forms.TextBox();
+            this.serverHostTextBox = new System.Windows.Forms.TextBox();
+            this.appNameTextBox = new System.Windows.Forms.TextBox();
             this.label6 = new System.Windows.Forms.Label();
             this.label7 = new System.Windows.Forms.Label();
+            this.appPwdTextBox = new System.Windows.Forms.TextBox();
+            this.appUserTextBox = new System.Windows.Forms.TextBox();
+            this.label1 = new System.Windows.Forms.Label();
+            this.label5 = new System.Windows.Forms.Label();
+            this.groupBox4 = new System.Windows.Forms.GroupBox();
+            this.tiPwdTextBox = new System.Windows.Forms.TextBox();
+            this.tiUserTextBox = new System.Windows.Forms.TextBox();
+            this.groupBox5 = new System.Windows.Forms.GroupBox();
+            this.label4 = new System.Windows.Forms.Label();
+            this.label3 = new System.Windows.Forms.Label();
             this.groupBox1.SuspendLayout();
             this.groupBox2.SuspendLayout();
             this.groupBox3.SuspendLayout();
@@ -170,12 +170,12 @@ namespace WinFormsApp1
             // 
             // groupBox3
             // 
-            this.groupBox3.Controls.Add(this.serverHost);
-            this.groupBox3.Controls.Add(this.appName);
+            this.groupBox3.Controls.Add(this.serverHostTextBox);
+            this.groupBox3.Controls.Add(this.appNameTextBox);
             this.groupBox3.Controls.Add(this.label6);
             this.groupBox3.Controls.Add(this.label7);
-            this.groupBox3.Controls.Add(this.appPwd);
-            this.groupBox3.Controls.Add(this.appUser);
+            this.groupBox3.Controls.Add(this.appPwdTextBox);
+            this.groupBox3.Controls.Add(this.appUserTextBox);
             this.groupBox3.Controls.Add(this.label1);
             this.groupBox3.Controls.Add(this.label5);
             this.groupBox3.Controls.Add(this.startButton);
@@ -188,87 +188,55 @@ namespace WinFormsApp1
             this.groupBox3.TabStop = false;
             this.groupBox3.Text = "软件配置";
             // 
-            // groupBox4
+            // serverHostTextBox
             // 
-            this.groupBox4.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.groupBox4.Controls.Add(this.tiPwd);
-            this.groupBox4.Controls.Add(this.tiUser);
-            this.groupBox4.Controls.Add(this.groupBox5);
-            this.groupBox4.Controls.Add(this.label4);
-            this.groupBox4.Controls.Add(this.label3);
-            this.groupBox4.Controls.Add(this.buyMoneyTextBox);
-            this.groupBox4.Controls.Add(this.label2);
-            this.groupBox4.Location = new System.Drawing.Point(473, 12);
-            this.groupBox4.Name = "groupBox4";
-            this.groupBox4.Size = new System.Drawing.Size(574, 168);
-            this.groupBox4.TabIndex = 9;
-            this.groupBox4.TabStop = false;
-            this.groupBox4.Text = "网站配置";
+            this.serverHostTextBox.Location = new System.Drawing.Point(273, 119);
+            this.serverHostTextBox.Name = "serverHostTextBox";
+            this.serverHostTextBox.Size = new System.Drawing.Size(130, 23);
+            this.serverHostTextBox.TabIndex = 19;
+            this.serverHostTextBox.Text = "43.243.120.55:50001";
             // 
-            // label3
+            // appNameTextBox
             // 
-            this.label3.AutoSize = true;
-            this.label3.Location = new System.Drawing.Point(36, 88);
-            this.label3.Name = "label3";
-            this.label3.Size = new System.Drawing.Size(32, 17);
-            this.label3.TabIndex = 7;
-            this.label3.Text = "账户";
-            this.label3.Click += new System.EventHandler(this.label3_Click);
+            this.appNameTextBox.Location = new System.Drawing.Point(274, 82);
+            this.appNameTextBox.Name = "appNameTextBox";
+            this.appNameTextBox.Size = new System.Drawing.Size(129, 23);
+            this.appNameTextBox.TabIndex = 18;
+            this.appNameTextBox.Text = "TI-001";
             // 
-            // label4
+            // label6
             // 
-            this.label4.AutoSize = true;
-            this.label4.Location = new System.Drawing.Point(36, 125);
-            this.label4.Name = "label4";
-            this.label4.Size = new System.Drawing.Size(32, 17);
-            this.label4.TabIndex = 8;
-            this.label4.Text = "密码";
+            this.label6.AutoSize = true;
+            this.label6.Location = new System.Drawing.Point(211, 122);
+            this.label6.Name = "label6";
+            this.label6.Size = new System.Drawing.Size(44, 17);
+            this.label6.TabIndex = 17;
+            this.label6.Text = "服务器";
             // 
-            // groupBox5
+            // label7
             // 
-            this.groupBox5.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.groupBox5.Controls.Add(this.searchProdTextBox);
-            this.groupBox5.Location = new System.Drawing.Point(297, 18);
-            this.groupBox5.Name = "groupBox5";
-            this.groupBox5.Size = new System.Drawing.Size(271, 133);
-            this.groupBox5.TabIndex = 9;
-            this.groupBox5.TabStop = false;
-            this.groupBox5.Text = "商品编号";
+            this.label7.AutoSize = true;
+            this.label7.Location = new System.Drawing.Point(211, 85);
+            this.label7.Name = "label7";
+            this.label7.Size = new System.Drawing.Size(56, 17);
+            this.label7.TabIndex = 16;
+            this.label7.Text = "软件编号";
             // 
-            // tiUser
+            // appPwdTextBox
             // 
-            this.tiUser.Location = new System.Drawing.Point(92, 85);
-            this.tiUser.Name = "tiUser";
-            this.tiUser.Size = new System.Drawing.Size(181, 23);
-            this.tiUser.TabIndex = 10;
-            this.tiUser.Text = "fzaw2008@163.com";
+            this.appPwdTextBox.Location = new System.Drawing.Point(60, 119);
+            this.appPwdTextBox.Name = "appPwdTextBox";
+            this.appPwdTextBox.Size = new System.Drawing.Size(131, 23);
+            this.appPwdTextBox.TabIndex = 15;
+            this.appPwdTextBox.Text = "Ti-01";
             // 
-            // tiPwd
+            // appUserTextBox
             // 
-            this.tiPwd.Location = new System.Drawing.Point(91, 122);
-            this.tiPwd.Name = "tiPwd";
-            this.tiPwd.Size = new System.Drawing.Size(182, 23);
-            this.tiPwd.TabIndex = 11;
-            this.tiPwd.Text = "Wilson1234";
-            // 
-            // appPwd
-            // 
-            this.appPwd.Location = new System.Drawing.Point(60, 119);
-            this.appPwd.Name = "appPwd";
-            this.appPwd.Size = new System.Drawing.Size(131, 23);
-            this.appPwd.TabIndex = 15;
-            this.appPwd.Text = "Ti-01";
-            // 
-            // appUser
-            // 
-            this.appUser.Location = new System.Drawing.Point(61, 82);
-            this.appUser.Name = "appUser";
-            this.appUser.Size = new System.Drawing.Size(130, 23);
-            this.appUser.TabIndex = 14;
-            this.appUser.Text = "TI-01";
-            this.appUser.TextChanged += new System.EventHandler(this.appUser_TextChanged);
+            this.appUserTextBox.Location = new System.Drawing.Point(61, 82);
+            this.appUserTextBox.Name = "appUserTextBox";
+            this.appUserTextBox.Size = new System.Drawing.Size(130, 23);
+            this.appUserTextBox.TabIndex = 14;
+            this.appUserTextBox.Text = "TI-01";
             // 
             // label1
             // 
@@ -288,39 +256,69 @@ namespace WinFormsApp1
             this.label5.TabIndex = 12;
             this.label5.Text = "账户";
             // 
-            // serverHost
+            // groupBox4
             // 
-            this.serverHost.Location = new System.Drawing.Point(273, 119);
-            this.serverHost.Name = "serverHost";
-            this.serverHost.Size = new System.Drawing.Size(130, 23);
-            this.serverHost.TabIndex = 19;
-            this.serverHost.Text = "43.243.120.55:50001";
+            this.groupBox4.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.groupBox4.Controls.Add(this.tiPwdTextBox);
+            this.groupBox4.Controls.Add(this.tiUserTextBox);
+            this.groupBox4.Controls.Add(this.groupBox5);
+            this.groupBox4.Controls.Add(this.label4);
+            this.groupBox4.Controls.Add(this.label3);
+            this.groupBox4.Controls.Add(this.buyMoneyTextBox);
+            this.groupBox4.Controls.Add(this.label2);
+            this.groupBox4.Location = new System.Drawing.Point(473, 12);
+            this.groupBox4.Name = "groupBox4";
+            this.groupBox4.Size = new System.Drawing.Size(574, 168);
+            this.groupBox4.TabIndex = 9;
+            this.groupBox4.TabStop = false;
+            this.groupBox4.Text = "网站配置";
             // 
-            // appName
+            // tiPwdTextBox
             // 
-            this.appName.Location = new System.Drawing.Point(274, 82);
-            this.appName.Name = "appName";
-            this.appName.Size = new System.Drawing.Size(129, 23);
-            this.appName.TabIndex = 18;
-            this.appName.Text = "TI-001";
+            this.tiPwdTextBox.Location = new System.Drawing.Point(91, 122);
+            this.tiPwdTextBox.Name = "tiPwdTextBox";
+            this.tiPwdTextBox.Size = new System.Drawing.Size(182, 23);
+            this.tiPwdTextBox.TabIndex = 11;
+            this.tiPwdTextBox.Text = "Wilson1234";
             // 
-            // label6
+            // tiUserTextBox
             // 
-            this.label6.AutoSize = true;
-            this.label6.Location = new System.Drawing.Point(211, 122);
-            this.label6.Name = "label6";
-            this.label6.Size = new System.Drawing.Size(44, 17);
-            this.label6.TabIndex = 17;
-            this.label6.Text = "服务器";
+            this.tiUserTextBox.Location = new System.Drawing.Point(92, 85);
+            this.tiUserTextBox.Name = "tiUserTextBox";
+            this.tiUserTextBox.Size = new System.Drawing.Size(181, 23);
+            this.tiUserTextBox.TabIndex = 10;
+            this.tiUserTextBox.Text = "fzaw2008@163.com";
             // 
-            // label7
+            // groupBox5
             // 
-            this.label7.AutoSize = true;
-            this.label7.Location = new System.Drawing.Point(211, 85);
-            this.label7.Name = "label7";
-            this.label7.Size = new System.Drawing.Size(56, 17);
-            this.label7.TabIndex = 16;
-            this.label7.Text = "软件编号";
+            this.groupBox5.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.groupBox5.Controls.Add(this.searchProdTextBox);
+            this.groupBox5.Location = new System.Drawing.Point(297, 18);
+            this.groupBox5.Name = "groupBox5";
+            this.groupBox5.Size = new System.Drawing.Size(271, 133);
+            this.groupBox5.TabIndex = 9;
+            this.groupBox5.TabStop = false;
+            this.groupBox5.Text = "商品编号";
+            // 
+            // label4
+            // 
+            this.label4.AutoSize = true;
+            this.label4.Location = new System.Drawing.Point(36, 125);
+            this.label4.Name = "label4";
+            this.label4.Size = new System.Drawing.Size(32, 17);
+            this.label4.TabIndex = 8;
+            this.label4.Text = "密码";
+            // 
+            // label3
+            // 
+            this.label3.AutoSize = true;
+            this.label3.Location = new System.Drawing.Point(36, 88);
+            this.label3.Name = "label3";
+            this.label3.Size = new System.Drawing.Size(32, 17);
+            this.label3.TabIndex = 7;
+            this.label3.Text = "账户";
             // 
             // Form1
             // 
@@ -361,19 +359,19 @@ namespace WinFormsApp1
         private System.Windows.Forms.Button clearCacheButton;
         private System.Windows.Forms.GroupBox groupBox3;
         private System.Windows.Forms.GroupBox groupBox4;
-        private System.Windows.Forms.TextBox tiPwd;
-        private System.Windows.Forms.TextBox tiUser;
+        private System.Windows.Forms.TextBox tiPwdTextBox;
+        private System.Windows.Forms.TextBox tiUserTextBox;
         private System.Windows.Forms.GroupBox groupBox5;
         private System.Windows.Forms.Label label4;
         private System.Windows.Forms.Label label3;
-        private System.Windows.Forms.TextBox serverHost;
+        private System.Windows.Forms.TextBox serverHostTextBox;
         private System.Windows.Forms.Label label6;
         private System.Windows.Forms.Label label7;
-        private System.Windows.Forms.TextBox appPwd;
-        private System.Windows.Forms.TextBox appUser;
+        private System.Windows.Forms.TextBox appPwdTextBox;
+        private System.Windows.Forms.TextBox appUserTextBox;
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.Label label5;
-        private System.Windows.Forms.TextBox appName;
+        private System.Windows.Forms.TextBox appNameTextBox;
     }
 }
 

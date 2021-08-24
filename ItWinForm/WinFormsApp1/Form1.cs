@@ -95,10 +95,10 @@ namespace WinFormsApp1
                 return false;
             }
 
-            userName = this.tiUser.Text.Trim();
-            password = this.tiPwd.Text.Trim();
-            string appUser = this.appUser.Text.Trim();
-            string appPwd = this.appPwd.Text.Trim();
+            userName = this.tiUserTextBox.Text.Trim();
+            password = this.tiPwdTextBox.Text.Trim();
+            string appUser = this.appUserTextBox.Text.Trim();
+            string appPwd = this.appPwdTextBox.Text.Trim();
 
             if (userName == string.Empty)
             {
@@ -123,14 +123,14 @@ namespace WinFormsApp1
                 return false;
             }
 
-            string appName = this.appName.Text.Trim();
+            string appName = this.appNameTextBox.Text.Trim();
             if (appName == string.Empty)
             {
                 MessageBox.Show("软件名称为空，请先输入软件名称");
                 return false;
 
             }
-            server = this.serverHost.Text.Trim();
+            server = this.serverHostTextBox.Text.Trim();
             if (server == string.Empty)
             {
                 MessageBox.Show("服务配置为空，请先确认服务配置");
@@ -198,7 +198,6 @@ namespace WinFormsApp1
                     {
 
                     }
-
                 }
             })).Start();
         }
@@ -280,7 +279,7 @@ namespace WinFormsApp1
                     string inventory = JsonData["inventory"].ToString();
                     SetRickText($"{prodName}找到库存{JsonData["orderablePartNumber"]} 共{inventory}");
                     string nName = partName != prodName ? (prodName + "->" + partName) : prodName;
-                    var mobileText = $"【{this.appName.Text.Trim()}】软件查到产品名称【{nName}】有库存【{inventory}】,请速登陆查看。";
+                    var mobileText = $"【{this.appNameTextBox.Text.Trim()}】软件查到产品名称【{nName}】有库存【{inventory}】,请速登陆查看。";
 
                     sendMsg(mobileText);
                 }
@@ -299,8 +298,7 @@ namespace WinFormsApp1
                     var payAddress = JsonData["payAddr"].ToString();
                     tiOrderCode = JsonData["tiOrderCode"].ToString();
                     var orderTotal = JsonData["orderTotal"].ToString();
-                    sendMsg($"【{this.appName.Text.Trim()}】软件抢单成功，订单编号【{tiOrderCode}】，产品名称【{prodName}】，下单用户名【{userName}】,订单总额【{orderTotal}】，支付二维码 {payAddress}。");
-
+                    sendMsg($"【{this.appNameTextBox.Text.Trim()}】软件抢单成功，订单编号【{tiOrderCode}】，产品名称【{prodName}】，下单用户名【{userName}】,订单总额【{orderTotal}】，支付二维码 {payAddress}。");
                 }
                 else if (arg.IndexOf("username") != -1)
                 {
@@ -530,18 +528,14 @@ namespace WinFormsApp1
             this.stopButton.Enabled = !this.startButton.Enabled;
             this.searchProdTextBox.Enabled = this.startButton.Enabled;
             this.buyMoneyTextBox.Enabled = this.startButton.Enabled;
-            running = this.startButton.Enabled;
-            
+            running = !this.startButton.Enabled;
+            this.tiUserTextBox.Enabled = this.startButton.Enabled;
+            this.tiPwdTextBox.Enabled = this.startButton.Enabled;
+            this.appUserTextBox.Enabled = this.startButton.Enabled;
+            this.appPwdTextBox.Enabled = this.startButton.Enabled;
+            this.appNameTextBox.Enabled = this.startButton.Enabled;
+            this.serverHostTextBox.Enabled = this.startButton.Enabled;
         }
 
-        private void label3_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void appUser_TextChanged(object sender, EventArgs e)
-        {
-
-        }
     }
 }
