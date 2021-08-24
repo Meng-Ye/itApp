@@ -52,7 +52,7 @@ namespace WinFormsApp1
         private string store = "store";
         private string cart = "cart";
         private string buyCount;
-        private string prodName = "prodName";
+        private string prodName;
         private string multi = "multi";
         private string payment = "payment";
         private string delivery = "delivery";
@@ -63,11 +63,13 @@ namespace WinFormsApp1
         private string userName = "fzaw2008@163.com";
         private string password = "Wilson1234";
         private Page page;
+        private string workDir = @"D:\eclipse-workspace";
+        private int prodIndex = 0;
 
         private void button1_Click(object sender, EventArgs e)
         {
-            var text1 = this.textBox2.Text.Trim();
-            var text2 = this.textBox3.Text.Trim();
+            var text1 = this.searchProdTextBox.Text.Trim();
+            var text2 = this.buyMoneyTextBox.Text.Trim();
             if (text1 == string.Empty)
             {
                 MessageBox.Show("商品信息为空，请先输入要搜索的商品");
@@ -84,15 +86,19 @@ namespace WinFormsApp1
                 MessageBox.Show("商品金额必须是正整数");
                 return;
             }
-            this.button1.Enabled = false;
-            this.button2.Enabled = true;
-            this.textBox1.Clear();
-            this.richTextBox1.Clear();
-            running = true;
+            this.startButton.Enabled = false;
+            this.scriptTextBox.Clear();
+            this.infoRichTextBox.Clear();
             ViewPortOptions viewPortOptions = new ViewPortOptions();
             viewPortOptions.Width = 1920;
             viewPortOptions.Height = 1080;
-            string executablePath = @"D:\eclipse-workspace\itApp\ItApp\bin\Debug\Config\chrome-win\chrome.exe";
+            prodIndex = 0;
+            prodName = this.searchProdTextBox.Text.Split(new char[] { ',' ,' '})[prodIndex];
+            string executablePath = @$"{workDir}\itApp\ItApp\bin\Debug\Config\chrome-win\chrome.exe";
+            if (!File.Exists(executablePath)) {
+                workDir = @"D:\.NET";
+                executablePath = @$"{workDir}\ItApp\ItApp\bin\Debug\Config\chrome-win\chrome.exe";
+            }
             var options = new LaunchOptions { Headless = true, Devtools = true, ExecutablePath = executablePath, DefaultViewport = viewPortOptions };
             new Thread(new ThreadStart(async delegate
             {
@@ -187,7 +193,7 @@ namespace WinFormsApp1
                     SetText(type);
                     SetRickText($"getAction is call,arg:{arg},resp:{type}");
                 }
-                return textBox1.Text;
+                return scriptTextBox.Text;
             }
             else
             {
@@ -197,7 +203,7 @@ namespace WinFormsApp1
                     string partName = JsonData["orderablePartNumber"].ToString();
                     string inventory = JsonData["inventory"].ToString();
                     SetRickText($"{prodName}找到库存{JsonData["orderablePartNumber"]} 共{inventory}");
-                    string nName = partName != prodName ? prodName + "->" + partName : prodName;
+                    string nName = partName != prodName ? (prodName + "->" + partName) : prodName;
                     var mobileText = $"【{appName}】软件查到产品名称【{nName}】有库存【{inventory}】,请速登陆查看。";
 
                     sendMsg(mobileText);
@@ -206,7 +212,7 @@ namespace WinFormsApp1
                 {
                     var cardId = JsonData["cardData"]["cartId"].ToString();
                     buyCount = JsonData["buyCountInfo"]["buyCount"].ToString();
-                    prodName = JsonData["buyCountInfo"]["prodName"].ToString();
+                    //prodName = JsonData["buyCountInfo"]["prodName"].ToString();
                     var singlePrice = JsonData["buyCountInfo"]["singlePrice"].ToString();
                     var inventoryLevel = JsonData["buyCountInfo"]["inventoryLevel"].ToString();
                     var totalMoney = Int32.Parse(buyCount) * Double.Parse(singlePrice);
@@ -228,9 +234,11 @@ namespace WinFormsApp1
                 {
                     page.TypeAsync("#password", password, new PuppeteerSharp.Input.TypeOptions() { Delay = 50 });
                 }
-                else if (arg.IndexOf("checkUser") != -1) { 
+                else if (arg.IndexOf("checkUser") != -1)
+                {
                     string user = JsonData["checkUser"].ToString();
-                    if (user == userName) {
+                    if (user == userName)
+                    {
                         SetText("TRUE");
                     }
                 }
@@ -241,6 +249,23 @@ namespace WinFormsApp1
                     {
                         SetText("TRUE");
                     }
+                }
+                else if (arg.IndexOf("searchTerm") != -1) 
+                {                    
+                    string [] tmp = this.searchProdTextBox.Text.Split(new char[] { ',', ' ' });
+                    if (prodIndex < tmp.Length) {
+                        prodIndex++;
+                        SetRickText($"{prodName} 暂无库存，开始下一个商品{tmp[prodIndex]}");
+                        prodName = tmp[prodIndex];
+                    }
+                    else
+                    {
+                        prodIndex = 0;
+                        prodName = tmp[prodIndex];
+                        SetRickText($"{prodName}暂无库存");
+                    }
+                    loginScript = null;
+                    getHookScript();
                 }
 
             }
@@ -256,8 +281,8 @@ namespace WinFormsApp1
         {
             if (loginScript == null)
             {
-                loginScript = File.ReadAllText(@"D:\eclipse-workspace\itApp\itShell\hook.js", Encoding.UTF8);
-                loginScript = $"var prodName='{this.textBox2.Text}';var buyMoney={this.textBox3.Text};\n\n" + loginScript;
+                loginScript = File.ReadAllText(@$"{workDir}\itApp\itShell\hook.js", Encoding.UTF8);
+                loginScript = $"var prodName='{prodName}';var buyMoney={this.buyMoneyTextBox.Text};\n\n" + loginScript;
             }
             return loginScript;
         }
@@ -370,36 +395,36 @@ namespace WinFormsApp1
 
         private void SetText(string text)
         {
-            if (this.textBox1.InvokeRequired)
+            if (this.scriptTextBox.InvokeRequired)
             {
                 SetTextCallBack stcb = new SetTextCallBack(SetText);
                 this.Invoke(stcb, new object[] { text });
             }
             else
             {
-                this.textBox1.Text = text;
+                this.scriptTextBox.Text = text;
             }
         }
 
         delegate void SetRickTextCallBack(string text);
         private void SetRickText(string text)
         {
-            if (this.richTextBox1.InvokeRequired)
+            if (this.infoRichTextBox.InvokeRequired)
             {
                 SetRickTextCallBack stcb = new SetRickTextCallBack(SetRickText);
                 this.Invoke(stcb, new object[] { text });
             }
             else
             {
-                if (this.richTextBox1.Lines.Length > 10000)
+                if (this.infoRichTextBox.Lines.Length > 10000)
                 {
                     int len = 3000;
                     string[] tmp = new string[len];
-                    Array.Copy(this.richTextBox1.Lines, this.richTextBox1.Lines.Length - len, tmp, 0, len);
-                    this.richTextBox1.Lines = tmp;
+                    Array.Copy(this.infoRichTextBox.Lines, this.infoRichTextBox.Lines.Length - len, tmp, 0, len);
+                    this.infoRichTextBox.Lines = tmp;
                 }
-                this.richTextBox1.AppendText("\n");
-                this.richTextBox1.AppendText(text);
+                this.infoRichTextBox.AppendText("\n");
+                this.infoRichTextBox.AppendText(text);
             }
         }
         private void Form1_FormClosed(object sender, FormClosedEventArgs e)
@@ -409,20 +434,28 @@ namespace WinFormsApp1
 
         private void button2_Click(object sender, EventArgs e)
         {
-            this.button1.Enabled = true;
-            this.button2.Enabled = false;
-            running = false;
+            this.startButton.Enabled = true;
         }
 
         private void textBox3_KeyUp(object sender, KeyEventArgs e)
         {
-            this.textBox3.Text = Regex.Replace(this.textBox3.Text, @"\D", "");
+            this.buyMoneyTextBox.Text = Regex.Replace(this.buyMoneyTextBox.Text, @"\D", "");
         }
 
 
         private void button3_Click(object sender, EventArgs e)
         {
+            loginScript = null;
             getHookScript();
+        }
+
+        private void button1_EnabledChanged(object sender, EventArgs e)
+        {
+            this.stopButton.Enabled = !this.startButton.Enabled;
+            this.searchProdTextBox.Enabled = this.startButton.Enabled;
+            this.buyMoneyTextBox.Enabled = this.startButton.Enabled;
+            running = this.startButton.Enabled;
+            
         }
     }
 }

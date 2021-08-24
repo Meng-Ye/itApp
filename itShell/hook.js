@@ -43,27 +43,56 @@ function doSearch() {
     document.getElementsByClassName("CoveoSearchbox")[0].getElementsByTagName("input")[0].value = prodName;
     document.getElementsByClassName("CoveoSearchbox")[0].getElementsByTagName("a")[0].click();
 }
-
+var searchItemData=false;
+var doSearchItemRunning = false;
 function searchItem() {
-    var rtnData = false;
+    if(searchItemData && searchItemData.gpn){
+        if(searchItemData.gpn == prodName){
+            location.href = "https://www.ti.com.cn/store/ti/zh/p/product/?p="+orderablePartNumber+"&keyMatch="+prodName+"&tisearch=search-everything&usecase=OPN";
+        }else{
+            location.href="https://www.ti.com.cn/product/"+searchItemData.gpn;
+        }
+    }
+    if(doSearchItemRunning){
+        return;
+    }
+    doSearchItemRunning= true;
     jQuery.ajax("https://www.ti.com.cn/search/gpn?searchTerm=" + prodName + "&locale=zh-CN", {
         method: 'GET',
         async: false,
         success: function (data) {
+            if(!data.gpn){
+                console.log(prodName+" 找不到商品");
+                getAction("{searchTerm:'NOTERM'}");
+                return;
+            }
             if (data.opns.length > 0) {
-                jQuery.ajax("https://www.ti.com.cn/productmodel/" + prodName + "/tistore?locale=zh-CN", {
+                jQuery.ajax("https://www.ti.com.cn/productmodel/" + data.gpn + "/tistore?locale=zh-CN", {
                     method: 'GET',
                     async: false,
                     success: function (data) {
+                        doSearchItemRunning = false;
+                        var hasInventoryIdx = -1;
                         for (var i = 0; i < data.length; i++) {
                             if (data[i].inventory > 0) {
-                                rtnData = data[i];
-                                break;
+                                if(data[i].orderablePartNumber==prodName){ //如果是本商品，精准查找
+                                    searchItemData = data[i];
+                                    searchItemData.gpn = prodName;
+                                    break;
+                                }
+                                if(hasInventoryIdx==-1){
+                                    hasInventoryIdx = i;
+                                }
                             }
+                        }
+                        if(hasInventoryIdx>0 && !searchItemData){
+                            searchItemData = data[hasInventoryIdx];
+                            searchItemData.gpn = data.gpn;
                         }
                     }, error: (e) => {
                         console.log(e);
                         console.log("5秒后重试")
+                        doSearchItemRunning = false;
                         setTimeout(searchItem, 5000);
                     }
                 });
@@ -71,17 +100,15 @@ function searchItem() {
         }, error: (e) => {
             console.log(e);
             console.log("5秒后重试")
+            doSearchItemRunning = false;
             setTimeout(searchItem, 5000);
         }
     });
-    if (rtnData) {
-        console.log(JSON.stringify(rtnData));
-        getAction(JSON.stringify(rtnData));
-        setTimeout(() => {
-            //location.href="https://www.ti.com.cn/product/"+prodName;
-        }, 100);
+    if (searchItemData) {
+        console.log(JSON.stringify(searchItemData));
+        getAction(JSON.stringify(searchItemData));
     }
-    return rtnData;
+    return searchItemData;
 }
 
 //登录
